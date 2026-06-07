@@ -36,12 +36,12 @@ header{width:100%;background:linear-gradient(135deg,var(--blue) 0%,var(--blue-da
 .lock-err{color:var(--red);font-size:0.84rem;min-height:20px;margin-bottom:16px;}
 .btn-unlock{width:100%;background:var(--blue);border:none;border-radius:12px;color:#fff;font-family:'Prompt',sans-serif;font-weight:900;font-size:1.05rem;padding:15px;cursor:pointer;}
 .btn-unlock:hover{background:var(--blue-dark);}
-#screen-waiting{background:rgba(10,61,145,0.97);z-index:190;color:#fff;}
+#screen-waiting{background:#062970;z-index:490;color:#fff;}
 .waiting-icon{font-size:3.5rem;margin-bottom:16px;animation:spin 3s linear infinite;}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 .waiting-title{font-family:'Prompt',sans-serif;font-size:1.8rem;font-weight:900;margin-bottom:10px;}
 .waiting-sub{font-size:1rem;opacity:0.8;}
-#screen-voted{background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dark) 100%);z-index:200;color:#fff;}
+#screen-voted{background:#0a3d91;z-index:500;color:#fff;}
 .voted-logo{width:72px;height:72px;object-fit:contain;border-radius:50%;background:#fff;padding:4px;margin-bottom:16px;}
 .voted-icon{font-size:5rem;animation:pop 0.5s cubic-bezier(0.34,1.56,0.64,1);}
 @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
@@ -431,6 +431,8 @@ async function castVote(isAbstain) {
       ? 'ได้รับการบันทึกการงดออกเสียงแล้ว\nกรุณารอเจ้าหน้าที่ดำเนินการต่อ'
       : 'ขอบคุณที่ร่วมใช้สิทธิ์ในการเลือกตั้ง\nกรุณารอเจ้าหน้าที่ดำเนินการต่อ';
     document.getElementById('screen-voted').classList.add('active');
+    // Text-to-Speech
+    speakVoted(isAbstain);
     document.getElementById('screen-waiting').classList.remove('active');
   } catch(e) {
     alert('เกิดข้อผิดพลาด กรุณาลองใหม่');
@@ -439,12 +441,35 @@ async function castVote(isAbstain) {
   }
 }
 
+function speakVoted(isAbstain) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const msg = new SpeechSynthesisUtterance(
+    isAbstain
+      ? 'งดออกเสียงเรียบร้อยแล้วครับ ขอบคุณครับ'
+      : 'ลงคะแนนเรียบร้อยแล้วครับ ขอบคุณครับ'
+  );
+  msg.lang  = 'th-TH';
+  msg.rate  = 0.9;
+  msg.pitch = 1.0;
+  // ลองหาเสียงภาษาไทยก่อน
+  const voices = window.speechSynthesis.getVoices();
+  const thVoice = voices.find(v => v.lang === 'th-TH' || v.lang === 'th');
+  if (thVoice) msg.voice = thVoice;
+  window.speechSynthesis.speak(msg);
+}
+
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id)?.classList.add('active');
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  // โหลด voices ล่วงหน้า (Chrome)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
   renderCandidates();
   window.restoreSession();
 });
