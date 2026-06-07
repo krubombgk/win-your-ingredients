@@ -93,8 +93,8 @@ header{width:100%;background:linear-gradient(135deg,var(--blue) 0%,var(--blue-da
 .btn-reject{flex:1;min-width:120px;background:var(--red);border:none;border-radius:12px;color:#fff;font-family:'Prompt',sans-serif;font-weight:900;font-size:0.95rem;padding:15px;cursor:pointer;transition:all 0.2s;}
 .btn-reject:hover:not(:disabled){background:var(--red-dark);}
 .btn-reject:disabled{opacity:0.35;cursor:not-allowed;}
-.btn-open{flex:1;min-width:120px;background:#059669;border:none;border-radius:12px;color:#fff;font-family:'Prompt',sans-serif;font-weight:900;font-size:0.92rem;padding:15px;cursor:pointer;transition:all 0.2s;}
-.btn-open:hover{background:#047857;}
+.btn-open{flex:1;min-width:120px;background:#d97706;border:none;border-radius:12px;color:#fff;font-family:'Prompt',sans-serif;font-weight:900;font-size:0.92rem;padding:15px;cursor:pointer;transition:all 0.2s;}
+.btn-open:hover:not(:disabled){background:#b45309;}
 .btn-open:disabled{opacity:0.35;cursor:not-allowed;}
 .btn-next{flex:1;min-width:120px;background:var(--blue);border:none;border-radius:12px;color:#fff;font-family:'Prompt',sans-serif;font-weight:700;font-size:0.92rem;padding:15px;cursor:pointer;transition:all 0.2s;}
 .btn-next:hover:not(:disabled){background:var(--blue-dark);}
@@ -160,8 +160,18 @@ header{width:100%;background:linear-gradient(135deg,var(--blue) 0%,var(--blue-da
       <div class="stat-label">รวมทุกรอบ (Approved)</div>
     </div>
   </div>
-  <!-- hidden สำหรับเก็บค่า abstain โดยไม่แสดงผล -->
+  <!-- hidden -->
   <div id="stat-abstain" style="display:none">0</div>
+  <!-- Progress bar รอบปัจจุบัน -->
+  <div class="section-card" style="padding:18px 24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="font-size:0.88rem;font-weight:600;color:var(--muted);">ความคืบหน้ารอบนี้</span>
+      <span style="font-family:'Prompt',sans-serif;font-weight:700;font-size:0.95rem;" id="progress-label">0 / 8 คน</span>
+    </div>
+    <div style="background:#f3f4f6;border-radius:99px;height:18px;overflow:hidden;">
+      <div id="round-progress-bar" style="height:100%;border-radius:99px;background:var(--blue);width:0%;transition:width 0.4s ease;"></div>
+    </div>
+  </div>
 
   <!-- สถานะคูหา -->
   <div class="section-card">
@@ -171,19 +181,6 @@ header{width:100%;background:linear-gradient(135deg,var(--blue) 0%,var(--blue-da
     </div>
   </div>
 
-  <!-- คะแนนสะสมรวมทุกรอบ -->
-  <div class="section-card">
-    <div class="section-title">📈 ความคืบหน้ารวม (ทุกรอบที่ Approve แล้ว)</div>
-    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">
-      <span style="font-family:'Prompt',sans-serif;font-size:2.5rem;font-weight:900;color:var(--blue);" id="total-approved-num">0</span>
-      <span style="font-size:0.9rem;color:var(--muted);">คน ที่ลงคะแนนแล้ว (รวมงดออกเสียง)</span>
-    </div>
-    <div class="progress-wrap">
-      <div class="progress-fill" id="total-progress-bar" style="width:0%"></div>
-    </div>
-    <div class="progress-label" id="total-progress-label">— / — คน</div>
-  </div>
-
   <!-- Approve / Reject -->
   <div class="section-card">
     <div class="section-title">การอนุมัติรอบนี้
@@ -191,7 +188,7 @@ header{width:100%;background:linear-gradient(135deg,var(--blue) 0%,var(--blue-da
     </div>
     <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <span style="font-size:0.88rem;color:var(--muted);">ระดับชั้นที่โหวตรอบนี้:</span>
-      <select id="grade-select" style="border:2px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Prompt',sans-serif;font-size:0.9rem;font-weight:700;outline:none;background:var(--bg);color:var(--text);">
+      <select id="grade-select" onchange="onGradeChange()" style="border:2px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Prompt',sans-serif;font-size:0.9rem;font-weight:700;outline:none;background:var(--bg);color:var(--text);">
         <option value="">— เลือกระดับชั้น —</option>
         <option value="p1">ป.1</option><option value="p2">ป.2</option>
         <option value="p3">ป.3</option><option value="p4">ป.4</option>
@@ -200,10 +197,9 @@ header{width:100%;background:linear-gradient(135deg,var(--blue) 0%,var(--blue-da
       </select>
     </div>
     <div class="action-btns">
-      <button class="btn-open"    id="btn-open"    onclick="openBooth()">🟢 เปิดคูหา</button>
+      <button class="btn-open"    id="btn-open"    onclick="openBooth()" disabled>🟡 เปิดคูหา</button>
       <button class="btn-approve" id="btn-approve" onclick="approveRound()" disabled>✅ Approve — รับผล</button>
       <button class="btn-reject"  id="btn-reject"  onclick="rejectRound()"  disabled>❌ Reject — ทำใหม่</button>
-      <button class="btn-next"    id="btn-next"    onclick="nextRound()"    disabled>➡ ขึ้นรอบถัดไป</button>
     </div>
   </div>
 </div>
@@ -309,49 +305,67 @@ function updateButtons(status) {
   const btnOpen    = document.getElementById('btn-open');
   const btnApprove = document.getElementById('btn-approve');
   const btnReject  = document.getElementById('btn-reject');
-  const btnNext    = document.getElementById('btn-next');
   const pill       = document.getElementById('status-pill');
+  const gradeEl    = document.getElementById('grade-select');
+  const gradeSelected = gradeEl && gradeEl.value !== '';
+
   if (status === 'voting') {
     if(btnOpen)    btnOpen.disabled    = true;
     if(btnApprove) btnApprove.disabled = false;
     if(btnReject)  btnReject.disabled  = false;
-    if(btnNext)    btnNext.disabled    = true;
+    if(gradeEl)    gradeEl.disabled    = true;
     const gl = window._currentGradeLabel || '';
     if(pill) { pill.textContent=`กำลังโหวต${gl?' — '+gl:''}`; pill.className='status-pill pill-voting'; }
   } else if (status === 'approved') {
     if(btnOpen)    btnOpen.disabled    = true;
     if(btnApprove) btnApprove.disabled = true;
     if(btnReject)  btnReject.disabled  = true;
-    if(btnNext)    btnNext.disabled    = false;
     if(pill) { pill.textContent='✅ Approved'; pill.className='status-pill pill-done'; }
   } else if (status === 'rejected') {
-    if(btnOpen)    btnOpen.disabled    = false;
+    if(gradeEl)    gradeEl.disabled    = false;
+    if(btnOpen)    btnOpen.disabled    = !gradeSelected;
     if(btnApprove) btnApprove.disabled = true;
     if(btnReject)  btnReject.disabled  = true;
-    if(btnNext)    btnNext.disabled    = true;
-    if(pill) { pill.textContent='❌ Rejected — กด เปิดคูหา เพื่อทำใหม่'; pill.className='status-pill pill-rejected'; }
+    if(pill) { pill.textContent='❌ Rejected — เลือกระดับชั้นแล้วกดเปิดคูหา'; pill.className='status-pill pill-rejected'; }
   } else {
-    if(btnOpen)    btnOpen.disabled    = false;
+    // idle / waiting
+    if(gradeEl)    gradeEl.disabled    = false;
+    if(btnOpen)    btnOpen.disabled    = !gradeSelected;
     if(btnApprove) btnApprove.disabled = true;
     if(btnReject)  btnReject.disabled  = true;
-    if(btnNext)    btnNext.disabled    = true;
-    if(pill) { pill.textContent='รอเปิดคูหา'; pill.className='status-pill pill-idle'; }
-    // ปลดล็อก dropdown ถ้าเป็น idle
-    const gradeEl = document.getElementById('grade-select');
-    if(gradeEl) gradeEl.disabled = false;
+    if(pill) { pill.textContent='รอเลือกระดับชั้นและเปิดคูหา'; pill.className='status-pill pill-idle'; }
   }
+}
+
+function onGradeChange() {
+  const sel = document.getElementById('grade-select');
+  const btnOpen = document.getElementById('btn-open');
+  const status = window._lastStatus || 'idle';
+  // เปิดปุ่มเปิดคูหาได้เมื่อเลือกระดับชั้นแล้ว และยังไม่ได้อยู่ใน voting
+  if(btnOpen) btnOpen.disabled = !sel.value || status === 'voting';
+}
+
+function updateProgressBar(voted, total) {
+  const pct = total > 0 ? Math.min(100, (voted/total)*100) : 0;
+  const bar = document.getElementById('round-progress-bar');
+  const lbl = document.getElementById('progress-label');
+  if(bar) bar.style.width = pct + '%';
+  if(bar) bar.style.background = pct >= 100 ? '#059669' : 'var(--blue)';
+  if(lbl) lbl.textContent = `${voted} / ${total > 0 ? total : '?'} คน`;
 }
 
 function updateStats(data) {
   const total   = data.total   || 0;
   const abstain = data.abstain || 0;
+  const needed  = data.votersNeeded || 8;
   const votedEl = document.getElementById('stat-voted');
   const absEl   = document.getElementById('stat-abstain');
   if(votedEl) votedEl.textContent = total;
   if(absEl)   absEl.textContent   = abstain;
-  // เก็บ grade ปัจจุบันไว้ใช้
   window._currentGrade      = data.grade      || '';
   window._currentGradeLabel = data.gradeLabel || '';
+  window._lastStatus        = data.status     || 'idle';
+  updateProgressBar(total, needed);
 }
 
 function subscribeBooths() {
@@ -404,16 +418,15 @@ window.openBooth = async function() {
   if (!grade) { alert('กรุณาเลือกระดับชั้นก่อนเปิดคูหา'); return; }
   const gradeLabel = sel.options[sel.selectedIndex].text;
   if (!confirm(`เปิดคูหารอบที่ ${currentRound} สำหรับ ${gradeLabel}?\nทุกเครื่องจะแสดงหน้าเลือกผู้สมัครทันที`)) return;
-  // ล็อก dropdown ทันที
   sel.disabled = true;
-  const resetData = { total:0, abstain:0, status:'voting', grade, gradeLabel };
+  const resetData = { total:0, abstain:0, status:'voting', grade, gradeLabel, votersNeeded:8 };
   for (let i=1;i<=6;i++) resetData[`c${i}`]=0;
   await setDoc(doc(db, "rounds", `round_${currentRound}`), resetData);
+  updateProgressBar(0, 8);
 };
 
 window.approveRound = async function() {
-  const voted   = parseInt(document.getElementById('stat-voted').textContent)  ||0;
-  const abstain = parseInt(document.getElementById('stat-abstain').textContent)||0;
+  const voted = parseInt(document.getElementById('stat-voted').textContent)||0;
   if (!confirm(`Approve รอบที่ ${currentRound}?\nมีการใช้สิทธิ์ทั้งหมด ${voted} คน จะถูกบันทึก`)) return;
   const roundRef    = doc(db, "rounds",  `round_${currentRound}`);
   const approvedRef = doc(db, "results", "approved");
@@ -424,11 +437,9 @@ window.approveRound = async function() {
   await runTransaction(db, async tx => {
     const aprSnap = await tx.get(approvedRef);
     const apr     = aprSnap.exists() ? aprSnap.data() : {};
-    // รวมคะแนนทั้งหมด
     for (let i=1;i<=6;i++) { apr[`c${i}`] = (apr[`c${i}`]||0) + (data[`c${i}`]||0); }
     apr.total   = (apr.total  ||0) + (data.total  ||0);
     apr.abstain = (apr.abstain||0) + (data.abstain||0);
-    // เก็บ breakdown ตามระดับชั้น
     if (grade) {
       for (let i=1;i<=6;i++) {
         apr[`${grade}_c${i}`] = (apr[`${grade}_c${i}`]||0) + (data[`c${i}`]||0);
@@ -439,8 +450,17 @@ window.approveRound = async function() {
     tx.set(approvedRef, apr, { merge:true });
     tx.update(roundRef, { status:'approved' });
   });
-  // ปลดล็อก dropdown
-  document.getElementById('grade-select').disabled = false;
+  // ขึ้นรอบถัดไปอัตโนมัติ
+  await setDoc(doc(db, "rounds", `round_${currentRound}`), { status:'waiting' }, { merge:true });
+  currentRound++;
+  await setDoc(doc(db, "settings","election"), { currentRound }, { merge:true });
+  updateRoundDisplay();
+  const sel = document.getElementById('grade-select');
+  if(sel) { sel.disabled = false; sel.value = ''; }
+  const btnOpen = document.getElementById('btn-open');
+  if(btnOpen) btnOpen.disabled = true;
+  updateProgressBar(0, 8);
+  subscribeRound();
 };
 
 window.rejectRound = async function() {
@@ -453,18 +473,7 @@ window.rejectRound = async function() {
   document.getElementById('grade-select').disabled = false;
 };
 
-window.nextRound = async function() {
-  if (!confirm('ขึ้นรอบถัดไปใช่ไหม?\nทุกเครื่องจะแสดงหน้ารอ')) return;
-  await setDoc(doc(db, "rounds", `round_${currentRound}`), { status:'waiting' }, { merge:true });
-  currentRound++;
-  await setDoc(doc(db, "settings","election"), { currentRound }, { merge:true });
-  updateRoundDisplay();
-  // reset dropdown
-  const sel = document.getElementById('grade-select');
-  sel.disabled = false;
-  sel.value    = '';
-  subscribeRound();
-};
+
 
 // รีเซ็ตคูหา — ล็อกคูหาใน Firestore เพื่อให้ login ใหม่ได้
 window.resetBooth = async function(num) {
