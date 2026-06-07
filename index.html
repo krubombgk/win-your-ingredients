@@ -444,11 +444,7 @@ async function castVote(isAbstain) {
 function speakVoted(isAbstain) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const msg = new SpeechSynthesisUtterance(
-    isAbstain
-      ? 'งดออกเสียงเรียบร้อยแล้วครับ ขอบคุณครับ'
-      : 'ลงคะแนนเรียบร้อยแล้วครับ ขอบคุณครับ'
-  );
+  const msg = new SpeechSynthesisUtterance('ลงคะแนนเรียบร้อยแล้วครับ ขอบคุณครับ');
   msg.lang  = 'th-TH';
   msg.rate  = 0.9;
   msg.pitch = 1.0;
