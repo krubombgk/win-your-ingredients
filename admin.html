@@ -239,7 +239,7 @@ window.doLogin = function() {
   initAdmin();
 };
 
-async function initAdmin() {
+window.initAdmin = async function() {
   try {
     const snap = await getDoc(doc(db, "settings", "election"));
     if (snap.exists()) currentRound = snap.data().currentRound || 1;
@@ -257,7 +257,7 @@ async function initAdmin() {
   } catch(e) {}
 }
 
-function subscribeApproved() {
+window.subscribeApproved = function() {
   onSnapshot(doc(db, "results", "approved"), snap => {
     const data  = snap.exists() ? snap.data() : {};
     const total = data.total || 0;
@@ -271,7 +271,7 @@ function subscribeApproved() {
   });
 }
 
-function updateProgressBar() {
+// removed old updateProgressBar
   const total   = window._totalApproved || 0;
   const planned = window._totalPlanned  || 0;
   const pct     = planned > 0 ? Math.min(100, (total/planned)*100).toFixed(1) : 0;
@@ -280,12 +280,12 @@ function updateProgressBar() {
     planned > 0 ? `${total} / ${planned} คน (${pct}%)` : `${total} คน`;
 }
 
-function updateRoundDisplay() {
+window.updateRoundDisplay = function() {
   document.getElementById('round-header').textContent = `รอบที่ ${currentRound}`;
   document.getElementById('round-title').textContent  = `รอบที่ ${currentRound}`;
 }
 
-function subscribeRound() {
+window.subscribeRound = function() {
   if (roundUnsub) roundUnsub();
   roundUnsub = onSnapshot(doc(db, "rounds", `round_${currentRound}`), snap => {
     const data   = snap.exists() ? snap.data() : {};
@@ -301,7 +301,7 @@ function subscribeRound() {
   });
 }
 
-function updateButtons(status) {
+window.updateButtons = function(status) {
   const btnOpen    = document.getElementById('btn-open');
   const btnApprove = document.getElementById('btn-approve');
   const btnReject  = document.getElementById('btn-reject');
@@ -337,7 +337,7 @@ function updateButtons(status) {
   }
 }
 
-function onGradeChange() {
+window.onGradeChange = function() {
   const sel = document.getElementById('grade-select');
   const btnOpen = document.getElementById('btn-open');
   const status = window._lastStatus || 'idle';
@@ -345,7 +345,7 @@ function onGradeChange() {
   if(btnOpen) btnOpen.disabled = !sel.value || status === 'voting';
 }
 
-function updateProgressBar(voted, total) {
+window.updateProgressBar = function(voted, total) {
   const pct = total > 0 ? Math.min(100, (voted/total)*100) : 0;
   const bar = document.getElementById('round-progress-bar');
   const lbl = document.getElementById('progress-label');
@@ -354,7 +354,7 @@ function updateProgressBar(voted, total) {
   if(lbl) lbl.textContent = `${voted} / ${total > 0 ? total : '?'} คน`;
 }
 
-function updateStats(data) {
+window.updateStats = function(data) {
   const total   = data.total   || 0;
   const abstain = data.abstain || 0;
   const needed  = data.votersNeeded || 8;
@@ -368,7 +368,7 @@ function updateStats(data) {
   updateProgressBar(total, needed);
 }
 
-function subscribeBooths() {
+window.subscribeBooths = function() {
   boothUnsubs.forEach(u => u());
   boothUnsubs = [];
   renderBoothGrid([]);
@@ -390,7 +390,7 @@ window.renderBoothGrid = function(data) {
     </div>`).join('');
 };
 
-function updateBoothUI(num, data) {
+window.updateBoothUI = function(num, data) {
   const pill      = document.getElementById(`booth-pill-${num}`);
   const statusEl  = document.getElementById(`booth-status-${num}`);
   if (!pill) return;
