@@ -226,7 +226,6 @@ async function initSuper() {
   } catch(e) {}
   // อัปเดต display ทันทีหลังอ่านได้
   document.getElementById('round-display').textContent = `รอบที่ ${currentRound}`;
-  renderBoothGrid();
   subscribeAll();
 }
 
@@ -271,12 +270,7 @@ function subscribeAll() {
   // subscribe รอบปัจจุบัน
   subscribeRound(currentRound);
 
-  // booths
-  for (let i=1;i<=8;i++) {
-    onSnapshot(doc(db,"booths",`booth_${i}`), snap => {
-      updateBooth(i, snap.exists() ? snap.data() : null);
-    });
-  }
+
 }
 
 function renderApproved(data) {
