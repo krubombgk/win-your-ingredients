@@ -224,6 +224,8 @@ async function initSuper() {
     const snap = await getDoc(doc(db, "settings", "election"));
     if (snap.exists()) currentRound = snap.data().currentRound || 1;
   } catch(e) {}
+  // อัปเดต display ทันทีหลังอ่านได้
+  document.getElementById('round-display').textContent = `รอบที่ ${currentRound}`;
   renderBoothGrid();
   subscribeAll();
 }
@@ -246,10 +248,14 @@ function subscribeAll() {
   onSnapshot(doc(db, "settings","election"), snap => {
     if (!snap.exists()) return;
     const r = snap.data().currentRound || 1;
+    // อัปเดตตัวเลขรอบเสมอ
     document.getElementById('round-display').textContent = `รอบที่ ${r}`;
     if (r !== currentRound) {
       currentRound = r;
       subscribeRound(currentRound);
+    } else {
+      // รอบเดิม แต่ต้องอัปเดต display ด้วย
+      currentRound = r;
     }
   });
 
