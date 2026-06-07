@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — ระบบเลือกตั้ง กัลยาประสิทธิ์</title>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;700;900&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#0a3d91;--blue-dark:#062970;--red:#c0182a;--red-dark:#8f0f1d;
+  --bg:#f0f4ff;--surface:#fff;--border:#dde3f5;
+  --text:#1a1f36;--muted:#6b7280;--success:#059669;--radius:16px;
+}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;}
+
+header{width:100%;background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dark) 60%,var(--red-dark) 100%);color:#fff;padding:0 28px;display:flex;align-items:center;justify-content:space-between;min-height:64px;border-bottom:4px solid var(--red);}
+.header-left{display:flex;align-items:center;gap:12px;}
+.header-logo{width:44px;height:44px;object-fit:contain;border-radius:50%;background:#fff;padding:3px;}
+.header-title{font-family:'Prompt',sans-serif;font-weight:900;font-size:1rem;}
+.header-badge{background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:20px;padding:4px 12px;font-size:0.78rem;font-weight:700;}
+
+/* LOGIN */
+#screen-login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 68px);width:100%;padding:24px;}
+.login-box{background:var(--surface);border-radius:var(--radius);padding:40px;width:100%;max-width:380px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.08);}
+.login-icon{font-size:2.5rem;margin-bottom:14px;}
+.login-title{font-family:'Prompt',sans-serif;font-weight:900;font-size:1.3rem;margin-bottom:6px;}
+.login-sub{font-size:0.85rem;color:var(--muted);margin-bottom:24px;}
+.login-input{width:100%;border:2px solid var(--border);border-radius:10px;padding:12px 16px;font-family:'Prompt',sans-serif;font-size:1.1rem;letter-spacing:4px;text-align:center;outline:none;margin-bottom:8px;transition:border-color 0.2s;}
+.login-input:focus{border-color:var(--blue);}
+.login-err{color:var(--red);font-size:0.84rem;min-height:20px;margin-bottom:14px;}
+.btn-login{width:100%;background:var(--blue);border:none;border-radius:10px;color:#fff;font-family:'Prompt',sans-serif;font-weight:700;font-size:1rem;padding:13px;cursor:pointer;}
+.btn-login:hover{background:var(--blue-dark);}
+
+/* MAIN */
+#screen-main{display:none;width:100%;max-width:860px;padding:28px 24px;}
+
+.section-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:24px 28px;margin-bottom:18px;}
+.section-title{font-family:'Prompt',sans-serif;font-weight:700;font-size:1rem;margin-bottom:16px;color:var(--blue);}
+
+/* Round setup */
+.setup-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.setup-label{font-size:0.88rem;color:var(--muted);}
+.setup-input{border:2px solid var(--border);border-radius:10px;padding:10px 14px;font-family:'Prompt',sans-serif;font-size:1.2rem;font-weight:700;width:90px;text-align:center;outline:none;transition:border-color 0.2s;}
+.setup-input:focus{border-color:var(--blue);}
+.btn-start{background:var(--blue);border:none;border-radius:10px;color:#fff;font-family:'Prompt',sans-serif;font-weight:700;font-size:0.92rem;padding:11px 22px;cursor:pointer;}
+.btn-start:hover{background:var(--blue-dark);}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.stat-box{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:16px 12px;text-align:center;}
+.stat-num{font-family:'Prompt',sans-serif;font-size:2rem;font-weight:900;color:var(--blue);}
+.stat-num.ok{color:var(--success);}
+.stat-num.warn{color:var(--red);}
+.stat-num.amber{color:#d97706;}
+.stat-label{font-size:0.75rem;color:var(--muted);margin-top:3px;}
+
+/* Booths */
+.booths-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.booth-pill{background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:10px 8px;text-align:center;font-size:0.82rem;}
+.booth-pill{position:relative;}
+.booth-pill.unlocked{border-color:#6ee7b7;background:#ecfdf5;}
+.booth-pill.voting{border-color:#93c5fd;background:#eff6ff;}
+.booth-pill.voted{border-color:#fbbf24;background:#fffbeb;}
+.booth-pill-num{font-family:'Prompt',sans-serif;font-weight:700;font-size:0.95rem;}
+.booth-pill-status{font-size:0.72rem;color:var(--muted);margin-top:2px;}
+.booth-pill.unlocked .booth-pill-status{color:#059669;}
+.booth-pill.voting .booth-pill-status{color:#1d4ed8;}
+.booth-pill.voted .booth-pill-status{color:#d97706;}
+.btn-reset-booth{
+  margin-top:8px;width:100%;
+  background:transparent;border:1px solid #fca5a5;
+  border-radius:6px;color:#dc2626;
+  font-family:'Sarabun',sans-serif;font-size:0.7rem;
+  padding:3px 6px;cursor:pointer;transition:all 0.2s;
+  display:none;
+}
+.booth-pill.unlocked .btn-reset-booth,
+.booth-pill.voting .btn-reset-booth,
+.booth-pill.voted .btn-reset-booth{display:block;}
+.btn-reset-booth:hover{background:#fef2f2;}
+
+/* Progress bar */
+.progress-wrap{background:#f3f4f6;border-radius:99px;height:16px;overflow:hidden;margin-top:8px;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--blue-mid));border-radius:99px;transition:width 0.5s ease;}
+.progress-label{font-size:0.82rem;color:var(--muted);margin-top:6px;text-align:right;}
+
+/* Action */
+.action-btns{display:flex;gap:12px;flex-wrap:wrap;}
+.btn-approve{flex:1;min-width:120px;background:var(--success);border:none;border-radius:12px;color:#fff;font-family:'Prompt',sans-serif;font-weight:900;font-size:0.95rem;padding:15px;cursor:pointer;transition:all 0.2s;}
+.btn-approve:hover:not(:disabled){background:#047857;}
+.btn-approve:disabled{opacity:0.35;cursor:not-allowed;}
+.btn-reject{flex:1;min-width:120px;background:var(--red);border:none;border-radius:12px;color:#fff;font-family:'Prompt',sans-serif;font-weight:900;font-size:0.95rem;padding:15px;cursor:pointer;transition:all 0.2s;}
+.btn-reject:hover:not(:disabled){background:var(--red-dark);}
+.btn-reject:disabled{opacity:0.35;cursor:not-allowed;}
+.btn-open{flex:1;min-width:120px;background:#059669;border:none;border-radius:12px;color:#fff;font-family:'Prompt',sans-serif;font-weight:900;font-size:0.92rem;padding:15px;cursor:pointer;transition:all 0.2s;}
+.btn-open:hover{background:#047857;}
+.btn-open:disabled{opacity:0.35;cursor:not-allowed;}
+.btn-next{flex:1;min-width:120px;background:var(--blue);border:none;border-radius:12px;color:#fff;font-family:'Prompt',sans-serif;font-weight:700;font-size:0.92rem;padding:15px;cursor:pointer;transition:all 0.2s;}
+.btn-next:hover:not(:disabled){background:var(--blue-dark);}
+.btn-next:disabled{opacity:0.35;cursor:not-allowed;}
+
+.status-pill{display:inline-block;padding:4px 14px;border-radius:20px;font-size:0.78rem;font-weight:700;margin-left:8px;}
+.pill-voting{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;}
+.pill-done{background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;}
+.pill-rejected{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;}
+.pill-idle{background:#f9fafb;color:#6b7280;border:1px solid #e5e7eb;}
+
+.live-badge{display:inline-flex;align-items:center;gap:6px;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:20px;padding:4px 12px;font-size:0.78rem;color:#065f46;font-weight:600;}
+.live-dot{width:7px;height:7px;background:#10b981;border-radius:50%;animation:pulse 1.4s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+.round-badge-main{font-family:'Prompt',sans-serif;font-size:1.5rem;font-weight:900;color:var(--blue);}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <img src="https://res.cloudinary.com/dgu19z5ay/image/upload/v1780744867/School_Logo_EPS_m7i5ff.png" class="header-logo" alt="โลโก้">
+    <div class="header-title">Admin — ระบบเลือกตั้ง กัลยาประสิทธิ์ 2569</div>
+  </div>
+  <span class="header-badge" id="round-header">รอบที่ 1</span>
+</header>
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-box">
+    <div class="login-icon">🔐</div>
+    <div class="login-title">Admin เข้าสู่ระบบ</div>
+    <div class="login-sub">สำหรับเจ้าหน้าที่ควบคุมการเลือกตั้ง</div>
+    <input type="password" id="admin-pass" class="login-input" placeholder="รหัสผ่าน" maxlength="30"
+      onkeypress="if(event.key==='Enter')doLogin()">
+    <div class="login-err" id="login-err"></div>
+    <button class="btn-login" onclick="doLogin()">เข้าสู่ระบบ</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="screen-main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span class="round-badge-main" id="round-title">รอบที่ 1</span>
+      <span class="status-pill pill-idle" id="status-pill">รอเริ่มรอบ</span>
+      <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+    </div>
+  </div>
+
+
+
+  <!-- Stats -->
+  <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);">
+    <div class="stat-box">
+      <div class="stat-num" id="stat-voted">0</div>
+      <div class="stat-label">ใช้สิทธิ์แล้วรอบนี้</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" id="stat-all-rounds">0</div>
+      <div class="stat-label">รวมทุกรอบ (Approved)</div>
+    </div>
+  </div>
+  <!-- hidden สำหรับเก็บค่า abstain โดยไม่แสดงผล -->
+  <div id="stat-abstain" style="display:none">0</div>
+
+  <!-- สถานะคูหา -->
+  <div class="section-card">
+    <div class="section-title">🖥️ สถานะคูหา</div>
+    <div class="booths-grid" id="booths-grid">
+      <!-- render by JS -->
+    </div>
+  </div>
+
+  <!-- คะแนนสะสมรวมทุกรอบ -->
+  <div class="section-card">
+    <div class="section-title">📈 ความคืบหน้ารวม (ทุกรอบที่ Approve แล้ว)</div>
+    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px;">
+      <span style="font-family:'Prompt',sans-serif;font-size:2.5rem;font-weight:900;color:var(--blue);" id="total-approved-num">0</span>
+      <span style="font-size:0.9rem;color:var(--muted);">คน ที่ลงคะแนนแล้ว (รวมงดออกเสียง)</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-fill" id="total-progress-bar" style="width:0%"></div>
+    </div>
+    <div class="progress-label" id="total-progress-label">— / — คน</div>
+  </div>
+
+  <!-- Approve / Reject -->
+  <div class="section-card">
+    <div class="section-title">การอนุมัติรอบนี้
+      <span class="status-pill pill-idle" id="status-pill">รอเปิดคูหา</span>
+    </div>
+    <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:0.88rem;color:var(--muted);">ระดับชั้นที่โหวตรอบนี้:</span>
+      <select id="grade-select" style="border:2px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Prompt',sans-serif;font-size:0.9rem;font-weight:700;outline:none;background:var(--bg);color:var(--text);">
+        <option value="">— เลือกระดับชั้น —</option>
+        <option value="p1">ป.1</option><option value="p2">ป.2</option>
+        <option value="p3">ป.3</option><option value="p4">ป.4</option>
+        <option value="p5">ป.5</option><option value="p6">ป.6</option>
+        <option value="m">มัธยม (ม.1-3 รวม)</option>
+      </select>
+    </div>
+    <div class="action-btns">
+      <button class="btn-open"    id="btn-open"    onclick="openBooth()">🟢 เปิดคูหา</button>
+      <button class="btn-approve" id="btn-approve" onclick="approveRound()" disabled>✅ Approve — รับผล</button>
+      <button class="btn-reject"  id="btn-reject"  onclick="rejectRound()"  disabled>❌ Reject — ทำใหม่</button>
+      <button class="btn-next"    id="btn-next"    onclick="nextRound()"    disabled>➡ ขึ้นรอบถัดไป</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, runTransaction, onSnapshot, getDoc, setDoc, collection }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ══════════════════════════
+// 🔧 CONFIG
+// ══════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyB7JooiGxDUaK-u5qG5ZPLOa555p0XxStg",
+  authDomain: "school-election-2026-973cd.firebaseapp.com",
+  projectId: "school-election-2026-973cd",
+  storageBucket: "school-election-2026-973cd.firebasestorage.app",
+  messagingSenderId: "958050422331",
+  appId: "1:958050422331:web:d2e43879bc464fd1c3161e"
+};
+const ADMIN_PASS = "admin1234"; // ← เปลี่ยน
+// ══════════════════════════
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+let currentRound = 1;
+let roundUnsub   = null;
+let boothUnsubs  = [];
+
+window.doLogin = function() {
+  const pass  = document.getElementById('admin-pass').value;
+  const errEl = document.getElementById('login-err');
+  if (pass !== ADMIN_PASS) { errEl.textContent = '❌ รหัสผ่านไม่ถูกต้อง'; return; }
+  document.getElementById('screen-login').style.display = 'none';
+  document.getElementById('screen-main').style.display  = 'block';
+  initAdmin();
+};
+
+async function initAdmin() {
+  try {
+    const snap = await getDoc(doc(db, "settings", "election"));
+    if (snap.exists()) currentRound = snap.data().currentRound || 1;
+  } catch(e) {}
+  updateRoundDisplay();
+  subscribeRound();
+  subscribeBooths();
+  subscribeApproved();
+  // อ่าน status ปัจจุบันทันทีหลัง login เพื่ออัปเดตปุ่ม
+  try {
+    const rsnap = await getDoc(doc(db, "rounds", `round_${currentRound}`));
+    const data  = rsnap.exists() ? rsnap.data() : {};
+    updateButtons(data.status || 'idle');
+    updateStats(data);
+  } catch(e) {}
+}
+
+function subscribeApproved() {
+  onSnapshot(doc(db, "results", "approved"), snap => {
+    const data  = snap.exists() ? snap.data() : {};
+    const total = data.total || 0;
+    document.getElementById('stat-all-rounds').textContent = total;
+    // คำนวณ progress จากจำนวนที่ต้องโหวตทั้งหมด (sum ของทุกรอบ)
+    // ใช้ votersNeeded สะสม ถ้ายังไม่มีก็แสดงแค่จำนวน
+    document.getElementById('total-progress-label').textContent = `${total} คน`;
+    // progress bar เต็ม 100% เมื่อ approve ครบทุกรอบ — ใช้ max จาก session
+    window._totalApproved = total;
+    updateProgressBar();
+  });
+}
+
+function updateProgressBar() {
+  const total   = window._totalApproved || 0;
+  const planned = window._totalPlanned  || 0;
+  const pct     = planned > 0 ? Math.min(100, (total/planned)*100).toFixed(1) : 0;
+  document.getElementById('total-progress-bar').style.width = pct + '%';
+  document.getElementById('total-progress-label').textContent =
+    planned > 0 ? `${total} / ${planned} คน (${pct}%)` : `${total} คน`;
+}
+
+function updateRoundDisplay() {
+  document.getElementById('round-header').textContent = `รอบที่ ${currentRound}`;
+  document.getElementById('round-title').textContent  = `รอบที่ ${currentRound}`;
+}
+
+function subscribeRound() {
+  if (roundUnsub) roundUnsub();
+  roundUnsub = onSnapshot(doc(db, "rounds", `round_${currentRound}`), snap => {
+    const data   = snap.exists() ? snap.data() : {};
+    const status = data.status || 'idle';
+    updateStats(data);
+    updateButtons(status);
+  });
+
+  onSnapshot(doc(db, "settings", "election"), snap => {
+    if (!snap.exists()) return;
+    const r = snap.data().currentRound || 1;
+    if (r !== currentRound) { currentRound = r; updateRoundDisplay(); subscribeRound(); }
+  });
+}
+
+function updateButtons(status) {
+  const btnOpen    = document.getElementById('btn-open');
+  const btnApprove = document.getElementById('btn-approve');
+  const btnReject  = document.getElementById('btn-reject');
+  const btnNext    = document.getElementById('btn-next');
+  const pill       = document.getElementById('status-pill');
+  if (status === 'voting') {
+    if(btnOpen)    btnOpen.disabled    = true;
+    if(btnApprove) btnApprove.disabled = false;
+    if(btnReject)  btnReject.disabled  = false;
+    if(btnNext)    btnNext.disabled    = true;
+    const gl = window._currentGradeLabel || '';
+    if(pill) { pill.textContent=`กำลังโหวต${gl?' — '+gl:''}`; pill.className='status-pill pill-voting'; }
+  } else if (status === 'approved') {
+    if(btnOpen)    btnOpen.disabled    = true;
+    if(btnApprove) btnApprove.disabled = true;
+    if(btnReject)  btnReject.disabled  = true;
+    if(btnNext)    btnNext.disabled    = false;
+    if(pill) { pill.textContent='✅ Approved'; pill.className='status-pill pill-done'; }
+  } else if (status === 'rejected') {
+    if(btnOpen)    btnOpen.disabled    = false;
+    if(btnApprove) btnApprove.disabled = true;
+    if(btnReject)  btnReject.disabled  = true;
+    if(btnNext)    btnNext.disabled    = true;
+    if(pill) { pill.textContent='❌ Rejected — กด เปิดคูหา เพื่อทำใหม่'; pill.className='status-pill pill-rejected'; }
+  } else {
+    if(btnOpen)    btnOpen.disabled    = false;
+    if(btnApprove) btnApprove.disabled = true;
+    if(btnReject)  btnReject.disabled  = true;
+    if(btnNext)    btnNext.disabled    = true;
+    if(pill) { pill.textContent='รอเปิดคูหา'; pill.className='status-pill pill-idle'; }
+    // ปลดล็อก dropdown ถ้าเป็น idle
+    const gradeEl = document.getElementById('grade-select');
+    if(gradeEl) gradeEl.disabled = false;
+  }
+}
+
+function updateStats(data) {
+  const total   = data.total   || 0;
+  const abstain = data.abstain || 0;
+  const votedEl = document.getElementById('stat-voted');
+  const absEl   = document.getElementById('stat-abstain');
+  if(votedEl) votedEl.textContent = total;
+  if(absEl)   absEl.textContent   = abstain;
+  // เก็บ grade ปัจจุบันไว้ใช้
+  window._currentGrade      = data.grade      || '';
+  window._currentGradeLabel = data.gradeLabel || '';
+}
+
+function subscribeBooths() {
+  boothUnsubs.forEach(u => u());
+  boothUnsubs = [];
+  renderBoothGrid([]);
+  for (let i = 1; i <= 8; i++) {
+    const unsub = onSnapshot(doc(db, "booths", `booth_${i}`), snap => {
+      updateBoothUI(i, snap.exists() ? snap.data() : null);
+    });
+    boothUnsubs.push(unsub);
+  }
+}
+
+window.renderBoothGrid = function(data) {
+  const grid = document.getElementById('booths-grid');
+  grid.innerHTML = Array.from({length:8},(_,i)=>`
+    <div class="booth-pill" id="booth-pill-${i+1}">
+      <div class="booth-pill-num">คูหา ${i+1}</div>
+      <div class="booth-pill-status" id="booth-status-${i+1}">⬜ รอปลดล็อก</div>
+      <button class="btn-reset-booth" onclick="resetBooth(${i+1})">🔄 รีเซ็ต</button>
+    </div>`).join('');
+};
+
+function updateBoothUI(num, data) {
+  const pill      = document.getElementById(`booth-pill-${num}`);
+  const statusEl  = document.getElementById(`booth-status-${num}`);
+  if (!pill) return;
+  pill.classList.remove('unlocked','voting','voted');
+  if (data && data.unlocked) {
+    const bs = data.boothStatus || 'ready';
+    if (bs === 'voted') {
+      pill.classList.add('voted');
+      statusEl.textContent = '✔️ โหวตเสร็จแล้ว';
+    } else if (bs === 'voting') {
+      pill.classList.add('voting');
+      statusEl.textContent = '🗳️ กำลังโหวต';
+    } else {
+      pill.classList.add('unlocked');
+      statusEl.textContent = '✅ พร้อมแล้ว';
+    }
+  } else {
+    statusEl.textContent = '⬜ รอปลดล็อก';
+  }
+}
+
+window.openBooth = async function() {
+  const sel   = document.getElementById('grade-select');
+  const grade = sel.value;
+  if (!grade) { alert('กรุณาเลือกระดับชั้นก่อนเปิดคูหา'); return; }
+  const gradeLabel = sel.options[sel.selectedIndex].text;
+  if (!confirm(`เปิดคูหารอบที่ ${currentRound} สำหรับ ${gradeLabel}?\nทุกเครื่องจะแสดงหน้าเลือกผู้สมัครทันที`)) return;
+  // ล็อก dropdown ทันที
+  sel.disabled = true;
+  const resetData = { total:0, abstain:0, status:'voting', grade, gradeLabel };
+  for (let i=1;i<=6;i++) resetData[`c${i}`]=0;
+  await setDoc(doc(db, "rounds", `round_${currentRound}`), resetData);
+};
+
+window.approveRound = async function() {
+  const voted   = parseInt(document.getElementById('stat-voted').textContent)  ||0;
+  const abstain = parseInt(document.getElementById('stat-abstain').textContent)||0;
+  if (!confirm(`Approve รอบที่ ${currentRound}?\nมีการใช้สิทธิ์ทั้งหมด ${voted} คน จะถูกบันทึก`)) return;
+  const roundRef    = doc(db, "rounds",  `round_${currentRound}`);
+  const approvedRef = doc(db, "results", "approved");
+  const roundSnap   = await getDoc(roundRef);
+  if (!roundSnap.exists()) return;
+  const data  = roundSnap.data();
+  const grade = data.grade || 'unknown';
+  await runTransaction(db, async tx => {
+    const aprSnap = await tx.get(approvedRef);
+    const apr     = aprSnap.exists() ? aprSnap.data() : {};
+    // รวมคะแนนทั้งหมด
+    for (let i=1;i<=6;i++) { apr[`c${i}`] = (apr[`c${i}`]||0) + (data[`c${i}`]||0); }
+    apr.total   = (apr.total  ||0) + (data.total  ||0);
+    apr.abstain = (apr.abstain||0) + (data.abstain||0);
+    // เก็บ breakdown ตามระดับชั้น
+    if (grade) {
+      for (let i=1;i<=6;i++) {
+        apr[`${grade}_c${i}`] = (apr[`${grade}_c${i}`]||0) + (data[`c${i}`]||0);
+      }
+      apr[`${grade}_total`]   = (apr[`${grade}_total`]  ||0) + (data.total  ||0);
+      apr[`${grade}_abstain`] = (apr[`${grade}_abstain`]||0) + (data.abstain||0);
+    }
+    tx.set(approvedRef, apr, { merge:true });
+    tx.update(roundRef, { status:'approved' });
+  });
+  // ปลดล็อก dropdown
+  document.getElementById('grade-select').disabled = false;
+};
+
+window.rejectRound = async function() {
+  const voted = parseInt(document.getElementById('stat-voted').textContent)||0;
+  if (!confirm(`Reject รอบที่ ${currentRound}?\nคะแนน ${voted} คน จะถูกล้าง ทุกเครื่องจะหยุดรับคะแนน`)) return;
+  const resetData = { status:'rejected', total:0, abstain:0 };
+  for (let i=1;i<=6;i++) resetData[`c${i}`]=0;
+  await setDoc(doc(db, "rounds", `round_${currentRound}`), resetData);
+  // ปลดล็อก dropdown ให้เลือกใหม่ได้
+  document.getElementById('grade-select').disabled = false;
+};
+
+window.nextRound = async function() {
+  if (!confirm('ขึ้นรอบถัดไปใช่ไหม?\nทุกเครื่องจะแสดงหน้ารอ')) return;
+  await setDoc(doc(db, "rounds", `round_${currentRound}`), { status:'waiting' }, { merge:true });
+  currentRound++;
+  await setDoc(doc(db, "settings","election"), { currentRound }, { merge:true });
+  updateRoundDisplay();
+  // reset dropdown
+  const sel = document.getElementById('grade-select');
+  sel.disabled = false;
+  sel.value    = '';
+  subscribeRound();
+};
+
+// รีเซ็ตคูหา — ล็อกคูหาใน Firestore เพื่อให้ login ใหม่ได้
+window.resetBooth = async function(num) {
+  if (!confirm(`รีเซ็ตคูหาที่ ${num}?\nเครื่องนี้จะถูกล็อก และต้องให้เจ้าหน้าที่ปลดล็อกใหม่`)) return;
+  await setDoc(doc(db, "booths", `booth_${num}`), {
+    unlocked: false, boothStatus: 'locked'
+  }, { merge: true });
+};
+</script>
+</body>
+</html>
