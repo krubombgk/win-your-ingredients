@@ -131,11 +131,11 @@ header{width:100%;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f34
       <span class="live-badge"><span class="live-dot"></span>LIVE</span>
     </div>
     <button class="btn-export" onclick="exportCSV()">📥 Export CSV</button>
-    <button class="btn-reset-all" onclick="openResetConfirm()">🗑️ Reset ข้อมูลทั้งหมด</button>
+    <button class="btn-reset-all" onclick="openResetConfirm()">🗑️ ล้างข้อมูลการเลือกตั้ง</button>
   </div>
 
   <!-- Stats สะสม -->
-  <div class="stats-grid">
+  <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);">
     <div class="stat-box">
       <div class="stat-num gold" id="stat-total-approved">0</div>
       <div class="stat-label">คะแนนสะสมทั้งหมด</div>
@@ -144,15 +144,9 @@ header{width:100%;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f34
       <div class="stat-num amber" id="stat-abstain-approved">0</div>
       <div class="stat-label">งดออกเสียง (สะสม)</div>
     </div>
-    <div class="stat-box">
-      <div class="stat-num" id="stat-round-now">—</div>
-      <div class="stat-label">โหวตแล้วรอบนี้</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num" id="stat-round-needed">—</div>
-      <div class="stat-label">ต้องโหวตรอบนี้</div>
-    </div>
   </div>
+  <div id="stat-round-now" style="display:none">0</div>
+  <div id="stat-round-needed" style="display:none">0</div>
 
   <!-- ผลสะสม Approved -->
   <div class="section-card">
@@ -180,11 +174,7 @@ header{width:100%;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f34
     </div>
   </div>
 
-  <!-- สถานะคูหา -->
-  <div class="section-card">
-    <div class="section-title">🖥️ สถานะคูหา</div>
-    <div class="booths-grid" id="booths-grid"></div>
-  </div>
+
 </div>
 
 <script type="module">
@@ -489,7 +479,7 @@ window.exportCSV = function() {
 <!-- Reset Confirm Overlay -->
 <div class="confirm-overlay" id="reset-overlay">
   <div class="confirm-box">
-    <div class="confirm-box-title">⚠️ Reset ข้อมูลการเลือกตั้ง</div>
+    <div class="confirm-box-title">⚠️ ล้างข้อมูลการเลือกตั้ง</div>
     <div class="confirm-box-sub">
       การ reset จะลบข้อมูลทั้งหมดออกจาก Firebase<br>
       ได้แก่ คะแนนทุกรอบ สถานะคูหา และผลสะสม<br><br>

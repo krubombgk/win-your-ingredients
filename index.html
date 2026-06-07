@@ -310,6 +310,21 @@ window.tryUnlock = async function() {
 window.restoreSession = async function() {
   const saved = sessionStorage.getItem('boothId');
   if (!saved) return;
+
+  // เช็ค Firestore ก่อนเสมอ ว่าคูหานี้ยัง unlocked อยู่มั้ย
+  try {
+    const snap = await getDoc(doc(db, "booths", `booth_${saved}`));
+    if (!snap.exists() || snap.data().unlocked !== true) {
+      // Admin reset แล้ว — ล้าง session และกลับ lock screen
+      sessionStorage.removeItem('boothId');
+      return;
+    }
+  } catch(e) {
+    // ถ้าเชื่อมต่อไม่ได้ ให้ล้าง session ไว้ก่อน
+    sessionStorage.removeItem('boothId');
+    return;
+  }
+
   boothId = saved;
   document.getElementById('screen-lock').classList.remove('active');
   document.getElementById('booth-badge').textContent = `คูหาที่ ${boothId}`;
@@ -325,9 +340,23 @@ async function initVoting() {
     if (snap.exists()) currentRound = snap.data().currentRound || 1;
   } catch(e) {}
   subscribeRound();
-  // ข้อ 3: ตรวจจับเมื่อ sessionStorage ถูกล้าง (เช่น กด Clear จาก console)
+  subscribeBoothLock(); // ฟัง Firestore ถ้า Admin reset
   window.addEventListener('storage', (e) => {
     if (e.key === 'boothId' && !e.newValue) lockBooth();
+  });
+}
+
+// subscribe สถานะคูหาตัวเอง — ถ้า Admin reset จะ lock ทันที
+function subscribeBoothLock() {
+  if (!boothId) return;
+  onSnapshot(doc(db, "booths", `booth_${boothId}`), snap => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    // ถ้า unlocked กลายเป็น false → Admin reset → lock ทันที
+    if (data.unlocked === false || data.boothStatus === 'locked') {
+      sessionStorage.removeItem('boothId');
+      lockBooth();
+    }
   });
 }
 
