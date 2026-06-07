@@ -271,14 +271,7 @@ window.subscribeApproved = function() {
   });
 }
 
-// removed old updateProgressBar
-  const total   = window._totalApproved || 0;
-  const planned = window._totalPlanned  || 0;
-  const pct     = planned > 0 ? Math.min(100, (total/planned)*100).toFixed(1) : 0;
-  document.getElementById('total-progress-bar').style.width = pct + '%';
-  document.getElementById('total-progress-label').textContent =
-    planned > 0 ? `${total} / ${planned} คน (${pct}%)` : `${total} คน`;
-}
+
 
 window.updateRoundDisplay = function() {
   document.getElementById('round-header').textContent = `รอบที่ ${currentRound}`;
