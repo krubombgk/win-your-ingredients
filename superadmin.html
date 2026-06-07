@@ -228,13 +228,29 @@ async function initSuper() {
   subscribeAll();
 }
 
+let roundUnsub = null;
+
+function subscribeRound(round) {
+  if (roundUnsub) roundUnsub();
+  roundUnsub = onSnapshot(doc(db,"rounds",`round_${round}`), snap => {
+    const data = snap.exists() ? snap.data() : {};
+    const rn = document.getElementById('stat-round-now');
+    const rnd = document.getElementById('stat-round-needed');
+    if(rn) rn.textContent  = data.total        ||0;
+    if(rnd) rnd.textContent = data.votersNeeded ||'—';
+  });
+}
+
 function subscribeAll() {
-  // settings — ตาม round
+  // settings — ตาม round และ re-subscribe เมื่อ round เปลี่ยน
   onSnapshot(doc(db, "settings","election"), snap => {
     if (!snap.exists()) return;
     const r = snap.data().currentRound || 1;
-    if (r !== currentRound) { currentRound = r; }
-    document.getElementById('round-display').textContent = `รอบที่ ${currentRound}`;
+    document.getElementById('round-display').textContent = `รอบที่ ${r}`;
+    if (r !== currentRound) {
+      currentRound = r;
+      subscribeRound(currentRound);
+    }
   });
 
   // approved
@@ -246,12 +262,8 @@ function subscribeAll() {
     document.getElementById('stat-abstain-approved').textContent = approvedData.abstain||0;
   });
 
-  // live round stats only (ไม่แสดงคะแนนรายคน)
-  onSnapshot(doc(db,"rounds",`round_${currentRound}`), snap => {
-    const data = snap.exists() ? snap.data() : {};
-    document.getElementById('stat-round-now').textContent    = data.total        ||0;
-    document.getElementById('stat-round-needed').textContent = data.votersNeeded ||'—';
-  });
+  // subscribe รอบปัจจุบัน
+  subscribeRound(currentRound);
 
   // booths
   for (let i=1;i<=8;i++) {
