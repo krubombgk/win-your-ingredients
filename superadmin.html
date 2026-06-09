@@ -201,12 +201,15 @@ window.CANDIDATES = [
   { id:4, number:4, name:"ธัญชนก สันรัมย์",        class:"พรรคใจจากเค้ามาเลือกเรานะ", color:"#7c3aed" },
   { id:5, number:5, name:"ชญาณิศา อ่อนนวล",       class:"พรรค แอส-แตร์-เวอ-นีร์", color:"#059669" },
   { id:6, number:6, name:"โชติมา แสงสมชัยพิพัฒน์",   class:"พรรค6", color:"#d97706" },
+
 ];
 // ══════════════════════════
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
-window._db = db;
+window._db  = db;
+window._doc = doc;
+window._setDoc = setDoc;
 let currentRound   = 1;
 let approvedData   = {};
 
@@ -396,24 +399,17 @@ window.doReset = async function() {
   btn.disabled = true;
   btn.textContent = 'กำลังลบข้อมูล...';
   try {
-    const db = window._db;
-    // ลบ results/approved
-    await setDoc(doc(db, "results", "approved"), {
-      total:0, abstain:0,
-      c1:0,c2:0,c3:0,c4:0,c5:0,c6:0
-    });
-    // ลบ settings/election
+    const db      = window._db;
+    const setDoc  = window._setDoc;
+    const doc     = window._doc;
+    await setDoc(doc(db, "results", "approved"), { total:0, abstain:0, c1:0,c2:0,c3:0,c4:0,c5:0,c6:0 });
     await setDoc(doc(db, "settings", "election"), { currentRound:1 });
-    // ลบ rounds/round_1
     await setDoc(doc(db, "rounds", "round_1"), { status:'idle', total:0, abstain:0 });
-    // ลบ booths ทั้งหมด
     for (let i = 1; i <= 8; i++) {
-      await setDoc(doc(db, "booths", `booth_${i}`), {
-        unlocked: false, boothStatus: 'locked'
-      });
+      await setDoc(doc(db, "booths", `booth_${i}`), { unlocked: false, boothStatus: 'locked' });
     }
     closeResetConfirm();
-    alert('✅ Reset เรียบร้อยแล้ว ข้อมูลทั้งหมดถูกลบแล้ว');
+    alert('✅ ล้างข้อมูลเรียบร้อยแล้ว');
   } catch(e) {
     document.getElementById('reset-err').textContent = '❌ เกิดข้อผิดพลาด: ' + e.message;
     btn.disabled = false;
