@@ -484,8 +484,7 @@ function sendWinnerToPick(){
 }
 
 function handleNewClaim(bagNum, teamId, currentBagsMap){
-  db.ref('/teams/' + teamId + '/hasBag').set(true);
-  db.ref('/teams/' + teamId + '/bagNum').set(bagNum);
+  db.ref('/teams/' + teamId).update({ hasBag: true, bagNum: bagNum });
   const name = (teams[teamId] && teams[teamId].name) || teamId;
   showReveal(bagNum, name);
   db.ref('/session/phase').set('waiting');
