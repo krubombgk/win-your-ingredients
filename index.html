@@ -63,8 +63,8 @@
   <div id="joinCard" class="card">
     <h2>Join your team</h2>
     <input type="text" id="teamNameInput" placeholder="Team name (e.g. Sakura Squad)" maxlength="30">
-    <label style="display:block;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-soft);margin:14px 0 5px;">Firebase config (ask your teacher for this)</label>
-    <textarea id="cfgInput" rows="5" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:11px;padding:8px;border-radius:8px;border:1px solid #D8CAA6;" placeholder='{"apiKey":"...","databaseURL":"..."}'></textarea>
+    <label style="display:block;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-soft);margin:14px 0 5px;">Firebase config (paste exactly what your teacher sent — the whole snippet is fine)</label>
+    <textarea id="cfgInput" rows="5" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:11px;padding:8px;border-radius:8px;border:1px solid #D8CAA6;" placeholder='const firebaseConfig = { apiKey: "...", databaseURL: "..." };'></textarea>
     <button class="bigbtn" id="joinBtn">Join game</button>
     <p id="joinStatus" style="text-align:center;color:var(--ink-soft);font-size:12.5px;margin-top:10px;"></p>
   </div>
@@ -108,6 +108,19 @@ const bags = [
 
 let db, teamId, teamName, myQuestionIndex = -1, hasAnsweredThisRound = false, bagsClaimed = {};
 
+// Accepts either strict JSON or the raw snippet Firebase Console shows
+// (e.g. "const firebaseConfig = { apiKey: \"...\", ... };" with unquoted keys).
+function parseFirebaseConfig(raw){
+  let text = raw.trim();
+  text = text.replace(/^(const|let|var)\s+\w+\s*=\s*/, '');
+  text = text.replace(/;\s*$/, '');
+  try {
+    return JSON.parse(text);
+  } catch(e){
+    return (new Function('return (' + text + ')'))();
+  }
+}
+
 function slugify(s){
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'team';
 }
@@ -116,8 +129,8 @@ document.getElementById('joinBtn').onclick = () => {
   const name = document.getElementById('teamNameInput').value.trim();
   if (!name){ document.getElementById('joinStatus').textContent = "Enter a team name first."; return; }
   let cfg;
-  try { cfg = JSON.parse(document.getElementById('cfgInput').value); }
-  catch(e){ document.getElementById('joinStatus').textContent = "Firebase config isn't valid JSON — check with your teacher."; return; }
+  try { cfg = parseFirebaseConfig(document.getElementById('cfgInput').value); }
+  catch(e){ document.getElementById('joinStatus').textContent = "Couldn't read that config — check it's the object Firebase gave you."; return; }
 
   // reuse saved identity on refresh
   const saved = localStorage.getItem('wyi_team');

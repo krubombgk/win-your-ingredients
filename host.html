@@ -97,8 +97,8 @@
   <div id="setupPanel" class="setup">
     <h2 style="font-family:'Kanit',sans-serif;margin:0;">Connect to Firebase</h2>
     <p class="smallnote">Paste your Firebase Realtime Database project config below (same project the team screen will use).</p>
-    <label>Firebase config (paste the whole JS object)</label>
-    <textarea id="cfgInput" rows="7" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:12px;padding:10px;border-radius:9px;border:1px solid #D8CAA6;" placeholder='{"apiKey":"...","databaseURL":"https://YOUR_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app", ...}'></textarea>
+    <label>Firebase config — paste exactly what Firebase Console gave you (the whole "const firebaseConfig = {...};" snippet is fine, no need to edit it)</label>
+    <textarea id="cfgInput" rows="7" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:12px;padding:10px;border-radius:9px;border:1px solid #D8CAA6;" placeholder='const firebaseConfig = { apiKey: "...", databaseURL: "https://YOUR_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app", ... };'></textarea>
     <button class="bigbtn" id="connectBtn">Connect</button>
     <p class="smallnote" id="connectStatus"></p>
   </div>
@@ -309,7 +309,7 @@ let db, teams = {}, bagsClaimed = {}, questionIndex = -1, currentRanking = [], p
 
 document.getElementById('connectBtn').onclick = () => {
   try {
-    const cfg = JSON.parse(document.getElementById('cfgInput').value);
+    const cfg = parseFirebaseConfig(document.getElementById('cfgInput').value);
     firebase.initializeApp(cfg);
     db = firebase.database();
     document.getElementById('connectStatus').textContent = "Connected. Starting game...";
@@ -317,9 +317,25 @@ document.getElementById('connectBtn').onclick = () => {
     document.getElementById('gamePanel').style.display = 'block';
     initGame();
   } catch(e) {
-    document.getElementById('connectStatus').textContent = "Couldn't parse that config — check it's valid JSON: " + e.message;
+    document.getElementById('connectStatus').textContent = "Couldn't read that config — check it's the object Firebase gave you: " + e.message;
   }
 };
+
+// Accepts either strict JSON or the raw snippet Firebase Console shows
+// (e.g. "const firebaseConfig = { apiKey: \"...\", ... };" with unquoted keys).
+function parseFirebaseConfig(raw){
+  let text = raw.trim();
+  // Drop a leading "const/let/var someName =" if present
+  text = text.replace(/^(const|let|var)\s+\w+\s*=\s*/, '');
+  // Drop a trailing semicolon
+  text = text.replace(/;\s*$/, '');
+  try {
+    return JSON.parse(text);
+  } catch(e){
+    // Fall back to evaluating it as a JS object literal (handles unquoted keys)
+    return (new Function('return (' + text + ')'))();
+  }
+}
 
 function initGame(){
   renderBagGrid();
