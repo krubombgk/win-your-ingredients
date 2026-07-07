@@ -1,525 +1,255 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>คูหาลงคะแนน — โรงเรียนอนุบาลกัลยาประสิทธิ์</title>
-<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;700;900&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<title>Win Your Ingredients · Team</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700;800&family=Sarabun:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --blue:#0a3d91;--blue-dark:#062970;--blue-mid:#1a56db;
-  --red:#c0182a;--red-dark:#8f0f1d;
-  --bg:#f0f4ff;--surface:#fff;--border:#dde3f5;
-  --text:#1a1f36;--muted:#6b7280;--success:#059669;--radius:20px;
-}
-body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;user-select:none;}
-header{width:100%;background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dark) 60%,var(--red-dark) 100%);color:#fff;padding:0 28px;display:flex;align-items:center;justify-content:space-between;min-height:72px;border-bottom:4px solid var(--red);}
-.header-left{display:flex;align-items:center;gap:14px;}
-.header-logo{width:52px;height:52px;object-fit:contain;border-radius:50%;background:#fff;padding:3px;}
-.header-titles{display:flex;flex-direction:column;}
-.header-main{font-family:'Prompt',sans-serif;font-weight:900;font-size:1.05rem;line-height:1.2;}
-.header-sub{font-size:0.75rem;opacity:0.85;margin-top:2px;}
-.booth-badge{background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:30px;padding:5px 14px;font-size:0.85rem;font-family:'Prompt',sans-serif;font-weight:700;}
-.overlay{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;z-index:100;}
-.overlay.active{display:flex;}
-#screen-lock{background:var(--bg);z-index:400;}
-.lock-box{background:var(--surface);border-radius:var(--radius);padding:44px 40px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.1);text-align:center;}
-.lock-logo{width:80px;height:80px;object-fit:contain;border-radius:50%;background:var(--blue);padding:6px;margin:0 auto 20px;}
-.lock-title{font-family:'Prompt',sans-serif;font-weight:900;font-size:1.5rem;color:var(--blue);margin-bottom:6px;}
-.lock-sub{font-size:0.88rem;color:var(--muted);margin-bottom:28px;line-height:1.6;}
-.field-label{font-size:0.82rem;color:var(--muted);font-weight:600;margin-bottom:8px;text-align:left;display:block;}
-.booth-select{width:100%;border:2px solid var(--border);border-radius:10px;padding:12px 16px;font-family:'Prompt',sans-serif;font-size:1rem;font-weight:700;outline:none;margin-bottom:16px;background:var(--bg);color:var(--text);cursor:pointer;transition:border-color 0.2s;}
-.booth-select:focus{border-color:var(--blue);}
-.lock-input{width:100%;border:2px solid var(--border);border-radius:10px;padding:13px 16px;font-family:'Prompt',sans-serif;font-size:1.1rem;letter-spacing:4px;text-align:center;outline:none;margin-bottom:8px;transition:border-color 0.2s;background:var(--bg);}
-.lock-input:focus{border-color:var(--blue);}
-.lock-err{color:var(--red);font-size:0.84rem;min-height:20px;margin-bottom:16px;}
-.btn-unlock{width:100%;background:var(--blue);border:none;border-radius:12px;color:#fff;font-family:'Prompt',sans-serif;font-weight:900;font-size:1.05rem;padding:15px;cursor:pointer;}
-.btn-unlock:hover{background:var(--blue-dark);}
-#screen-waiting{background:#062970;z-index:490;color:#fff;}
-.waiting-icon{font-size:3.5rem;margin-bottom:16px;animation:spin 3s linear infinite;}
-@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-.waiting-title{font-family:'Prompt',sans-serif;font-size:1.8rem;font-weight:900;margin-bottom:10px;}
-.waiting-sub{font-size:1rem;opacity:0.8;}
-#screen-voted{background:#0a3d91;z-index:500;color:#fff;}
-.voted-logo{width:72px;height:72px;object-fit:contain;border-radius:50%;background:#fff;padding:4px;margin-bottom:16px;}
-.voted-icon{font-size:5rem;animation:pop 0.5s cubic-bezier(0.34,1.56,0.64,1);}
-@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
-.voted-title{font-family:'Prompt',sans-serif;font-size:2.5rem;font-weight:900;margin:20px 0 10px;}
-.voted-sub{font-size:1.05rem;opacity:0.85;margin-bottom:36px;line-height:1.7;}
-.voted-waiting{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);border-radius:16px;padding:20px 32px;font-size:0.92rem;}
-.screen{display:none}.screen.active{display:flex;flex-direction:column;align-items:center}
-#screen-vote{width:100%;max-width:1100px;padding:28px 24px;}
-.vote-instruction{font-family:'Prompt',sans-serif;font-size:1.9rem;font-weight:900;text-align:center;margin-bottom:6px;color:var(--blue);}
-.vote-sub{text-align:center;color:var(--muted);margin-bottom:28px;font-size:0.95rem;}
-.candidates-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%;margin-bottom:20px;}
-.candidate-card{background:transparent;border:none;cursor:pointer;transition:all 0.25s;text-align:center;position:relative;padding:8px 4px 12px;display:flex;flex-direction:column;align-items:center;}
-.candidate-card:hover{transform:translateY(-6px);}
-.candidate-card:hover .candidate-circle{box-shadow:0 16px 40px rgba(10,61,145,0.25);}
-.candidate-card.selected .candidate-circle{box-shadow:0 0 0 6px rgba(10,61,145,0.3),0 12px 36px rgba(10,61,145,0.25);}
-.candidate-card.selected::after{content:'✓';position:absolute;top:8px;right:calc(50% - 60px);width:36px;height:36px;background:var(--blue);color:#fff;border-radius:50%;display:grid;place-items:center;font-size:1.1rem;font-weight:900;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
-.candidate-circle{width:200px;height:200px;border-radius:50%;overflow:hidden;position:relative;margin-bottom:14px;border:5px solid var(--border);transition:all 0.25s;}
-.candidate-card.selected .candidate-circle{border-color:var(--blue);}
-.candidate-num{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-family:'Prompt',sans-serif;font-size:1rem;font-weight:900;width:40px;height:40px;border-radius:50%;line-height:40px;color:#fff;z-index:10;box-shadow:0 2px 10px rgba(0,0,0,0.35);text-align:center;border:2px solid rgba(255,255,255,0.6);}
-.candidate-photo{width:100%;height:100%;object-fit:cover;display:block;}
-.candidate-photo-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Prompt',sans-serif;font-size:3.5rem;font-weight:900;color:#fff;}
-.candidate-info-bar{text-align:center;}
-.candidate-name{font-family:'Prompt',sans-serif;font-size:1rem;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:3px;}
-.candidate-class{font-size:0.82rem;color:var(--muted);}
-.vote-footer{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:4px;}
-.btn-abstain{background:transparent;border:2px solid #d1d5db;border-radius:12px;color:var(--muted);font-family:'Prompt',sans-serif;font-size:0.95rem;font-weight:700;padding:14px 28px;cursor:pointer;transition:all 0.2s;}
-.btn-abstain:hover{border-color:var(--red);color:var(--red);}
-.btn-vote{background:var(--blue);border:none;border-radius:14px;color:#fff;font-family:'Prompt',sans-serif;font-size:1.2rem;font-weight:900;padding:18px 44px;cursor:pointer;transition:all 0.2s;opacity:0.4;pointer-events:none;}
-.btn-vote.ready{opacity:1;pointer-events:all;}
-.btn-vote.ready:hover{background:var(--blue-dark);transform:translateY(-2px);}
-#screen-confirm{width:100%;max-width:900px;padding:44px 24px;text-align:center;}
-.confirm-title{font-family:'Prompt',sans-serif;font-size:1.7rem;font-weight:900;margin-bottom:22px;}
-.confirm-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:32px;margin-bottom:20px;box-shadow:0 8px 32px rgba(0,0,0,0.06);display:flex;gap:40px;align-items:center;text-align:left;}
-.confirm-photo{width:280px;height:380px;flex-shrink:0;border-radius:16px;object-fit:cover;display:block;border:3px solid var(--blue);}
-.confirm-photo-placeholder{width:280px;height:380px;flex-shrink:0;border-radius:16px;display:flex;align-items:center;justify-content:center;font-family:'Prompt',sans-serif;font-size:4rem;font-weight:900;color:#fff;border:3px solid var(--blue);}
-.confirm-info{flex:1;}
-.confirm-num-label{font-size:1rem;color:var(--muted);margin-bottom:8px;}
-.confirm-num-big{font-family:'Prompt',sans-serif;font-size:2.6rem;font-weight:900;color:var(--blue);margin-bottom:14px;}
-.confirm-name-big{font-family:'Prompt',sans-serif;font-size:1.9rem;font-weight:700;margin-bottom:8px;line-height:1.3;}
-.confirm-class-txt{font-size:1.15rem;color:var(--muted);}
-@media (max-width:760px){
-  .confirm-card{flex-direction:column;text-align:center;}
-  .confirm-photo,.confirm-photo-placeholder{width:100%;max-width:260px;height:340px;}
-  .confirm-info{text-align:center;}
-}
-.confirm-warn{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:13px 16px;font-size:0.88rem;color:#92400e;margin-bottom:22px;text-align:left;}
-.confirm-btns{display:flex;gap:12px;}
-.btn-back{flex:1;background:transparent;border:2px solid var(--border);border-radius:12px;font-family:'Prompt',sans-serif;font-size:1rem;font-weight:700;padding:15px;cursor:pointer;color:var(--text);}
-.btn-confirm-final{flex:2;background:var(--success);border:none;border-radius:12px;color:#fff;font-family:'Prompt',sans-serif;font-size:1rem;font-weight:900;padding:15px;cursor:pointer;transition:all 0.2s;}
-.btn-confirm-final:disabled{opacity:0.5;cursor:not-allowed;}
-#screen-abstain{width:100%;max-width:480px;padding:60px 24px;text-align:center;}
-.abstain-icon{font-size:4rem;margin-bottom:16px;}
-.abstain-title{font-family:'Prompt',sans-serif;font-size:1.7rem;font-weight:900;margin-bottom:10px;}
-.abstain-sub{color:var(--muted);margin-bottom:28px;line-height:1.7;}
+  :root{
+    --paper:#FAF7F0; --paper-dark:#EDE6D6; --ink:#211C2E; --ink-soft:#5A5568;
+    --flag-red:#B3122E; --flag-blue:#202A54; --flag-blue-deep:#161B38;
+    --fusion-gold:#C9982F; --claimed:#C9982F;
+    --shadow: 0 8px 24px rgba(32,26,20,0.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{ margin:0; padding:0; min-height:100%; background: radial-gradient(1200px 600px at 50% -200px, #fffdf6 0%, var(--paper) 55%), var(--paper); color:var(--ink); font-family:'Sarabun', sans-serif; }
+  .stage{ max-width:480px; margin:0 auto; padding: 20px 18px 60px; min-height:100vh; }
+  h1{ font-family:'Kanit', sans-serif; font-weight:800; font-size:24px; margin:0 0 4px; text-align:center; }
+  h1 .r{ color:var(--flag-red);} h1 .b{ color:var(--flag-blue);}
+  .eyebrow{ font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft); text-align:center; margin:0 0 20px;}
+
+  .card{ background:#fff; border:1px solid #EADFC4; border-radius:16px; padding:24px 20px; box-shadow:var(--shadow); margin-bottom:18px; }
+  .card h2{ font-family:'Kanit',sans-serif; font-size:19px; margin:0 0 12px; text-align:center;}
+  input[type=text]{ width:100%; padding:13px 14px; border-radius:10px; border:1px solid #D8CAA6; font-size:16px; font-family:'Sarabun',sans-serif; }
+  .bigbtn{ font-family:'Kanit',sans-serif; font-weight:600; font-size:16px; background:var(--flag-blue); color:#fff; border:none; padding:14px 20px; border-radius:11px; cursor:pointer; width:100%; margin-top:14px;}
+  .bigbtn:hover{ background:var(--flag-blue-deep); }
+  .bigbtn:disabled{ opacity:.4; }
+
+  .teamtag{ text-align:center; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--ink-soft); margin-bottom:14px; }
+  .teamtag b{ color:var(--ink); }
+
+  .qtext{ font-family:'Kanit',sans-serif; font-size:21px; font-weight:600; text-align:center; margin:0 0 18px;}
+  .optbtn{ display:block; width:100%; text-align:left; background:var(--paper-dark); border:2px solid transparent; border-radius:12px; padding:16px 18px; font-size:16px; font-family:'Sarabun',sans-serif; margin-bottom:10px; cursor:pointer; }
+  .optbtn:active{ transform:scale(.98); }
+  .optbtn.selected{ border-color:var(--flag-blue); background:#E4E9F4; }
+  .optbtn:disabled{ opacity:.55; cursor:default; }
+
+  .feedback{ text-align:center; font-family:'Kanit',sans-serif; font-size:19px; padding:14px; }
+  .feedback.good{ color:var(--claimed); }
+  .feedback.bad{ color:var(--ink-soft); }
+  .waitmsg{ text-align:center; color:var(--ink-soft); font-size:15px; padding:20px 0; }
+
+  .baggrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  .bagbtn{ aspect-ratio:1/1; border-radius:10px; border:1px solid #E1D4B2; background:linear-gradient(160deg,#FBF7EC 0%, var(--paper-dark) 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:'Kanit',sans-serif; font-weight:700; font-size:18px; cursor:pointer; position:relative; }
+  .bagbtn .r{ font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--ink-soft); font-weight:400; }
+  .bagbtn.jp2{ box-shadow: inset 0 3px 0 var(--flag-red); }
+  .bagbtn.th2{ box-shadow: inset 0 3px 0 var(--flag-blue); }
+  .bagbtn.taken{ opacity:.35; pointer-events:none; }
+  .bagbtn:active{ transform:scale(.95); }
+
+  .confirmbox{ text-align:center; }
+  .confirmbox .big{ font-family:'Kanit',sans-serif; font-size:26px; font-weight:700; color:var(--claimed); margin:10px 0;}
 </style>
 </head>
 <body>
-<header>
-  <div class="header-left">
-    <img src="https://res.cloudinary.com/dgu19z5ay/image/upload/v1780744867/School_Logo_EPS_m7i5ff.png" class="header-logo" alt="โลโก้">
-    <div class="header-titles">
-      <div class="header-main">เลือกตั้งประธานนักเรียน โรงเรียนอนุบาลกัลยาประสิทธิ์</div>
-      <div class="header-sub">ปีการศึกษา 2569</div>
+<div class="stage">
+  <p class="eyebrow">Win Your Ingredients · Team</p>
+  <h1><span class="r">Fusion</span> <span class="b">Food Challenge</span></h1>
+
+  <div id="joinCard" class="card">
+    <h2>Join your team</h2>
+    <input type="text" id="teamNameInput" placeholder="Team name (e.g. Sakura Squad)" maxlength="30">
+    <label style="display:block;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-soft);margin:14px 0 5px;">Firebase config (ask your teacher for this)</label>
+    <textarea id="cfgInput" rows="5" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:11px;padding:8px;border-radius:8px;border:1px solid #D8CAA6;" placeholder='{"apiKey":"...","databaseURL":"..."}'></textarea>
+    <button class="bigbtn" id="joinBtn">Join game</button>
+    <p id="joinStatus" style="text-align:center;color:var(--ink-soft);font-size:12.5px;margin-top:10px;"></p>
+  </div>
+
+  <div id="gameArea" style="display:none;">
+    <p class="teamtag">Playing as <b id="teamNameLabel"></b></p>
+
+    <div id="waitingCard" class="card" style="display:none;">
+      <p class="waitmsg" id="waitingText">Waiting for the host to start the next question…</p>
     </div>
-  </div>
-  <span class="booth-badge" id="booth-badge">คูหา —</span>
-</header>
 
-<div id="screen-lock" class="overlay active">
-  <div class="lock-box">
-    <img src="https://res.cloudinary.com/dgu19z5ay/image/upload/v1780744867/School_Logo_EPS_m7i5ff.png" class="lock-logo" alt="โลโก้">
-    <div class="lock-title">ระบบลงคะแนนเสียง</div>
-    <div class="lock-sub">กรุณารอเจ้าหน้าที่ปลดล็อกเครื่อง<br>ก่อนเริ่มการลงคะแนน</div>
-    <label class="field-label">หมายเลขคูหา</label>
-    <select id="booth-select" class="booth-select">
-      <option value="">— เลือกคูหา —</option>
-      <option value="1">คูหาที่ 1</option><option value="2">คูหาที่ 2</option>
-      <option value="3">คูหาที่ 3</option><option value="4">คูหาที่ 4</option>
-      <option value="5">คูหาที่ 5</option><option value="6">คูหาที่ 6</option>
-      <option value="7">คูหาที่ 7</option><option value="8">คูหาที่ 8</option>
-    </select>
-    <label class="field-label">รหัสผ่านคูหา</label>
-    <input type="password" id="lock-pass" class="lock-input" placeholder="รหัสผ่าน" maxlength="20"
-      onkeypress="if(event.key==='Enter')tryUnlock()">
-    <div class="lock-err" id="lock-err"></div>
-    <button class="btn-unlock" onclick="tryUnlock()">🔓 ปลดล็อกเครื่อง</button>
-  </div>
-</div>
+    <div id="questionCard" class="card" style="display:none;">
+      <p class="qtext" id="qText"></p>
+      <div id="qOpts"></div>
+    </div>
 
-<div id="screen-waiting" class="overlay">
-  <div class="waiting-icon">⏳</div>
-  <div class="waiting-title" id="waiting-title">พร้อมแล้ว</div>
-  <div class="waiting-sub" id="waiting-sub">รอเจ้าหน้าที่กดเริ่มรอบการลงคะแนน</div>
-</div>
+    <div id="feedbackCard" class="card" style="display:none;">
+      <p class="feedback" id="feedbackText"></p>
+    </div>
 
-<div id="screen-voted" class="overlay">
-  <img src="https://res.cloudinary.com/dgu19z5ay/image/upload/v1780744867/School_Logo_EPS_m7i5ff.png" class="voted-logo" alt="โลโก้">
-  <div class="voted-icon" id="voted-icon">✅</div>
-  <div class="voted-title" id="voted-title">ลงคะแนนสำเร็จแล้ว!</div>
-  <div class="voted-sub" id="voted-sub">ขอบคุณที่ร่วมใช้สิทธิ์ในการเลือกตั้ง<br>กรุณารอเจ้าหน้าที่ดำเนินการต่อ</div>
-  <div class="voted-waiting">🔒 กำลังรอผู้ลงคะแนนคนถัดไป...</div>
-</div>
+    <div id="pickingCard" class="card" style="display:none;">
+      <h2 id="pickingHeader">🎁 Your turn — pick a mystery bag!</h2>
+      <div class="baggrid" id="bagGrid"></div>
+    </div>
 
-<div id="screen-vote" class="screen">
-  <div style="width:100%;max-width:1100px;padding:28px 24px;">
-    <h1 class="vote-instruction">กดเลือกผู้สมัครที่ต้องการ</h1>
-    <p class="vote-sub">เลือกได้ 1 คน — กดที่รูปหรือชื่อผู้สมัคร</p>
-    <div class="candidates-grid" id="candidates-grid"></div>
-    <div class="vote-footer">
-      <button class="btn-abstain" onclick="goAbstain()">🚫 งดออกเสียง</button>
-      <button class="btn-vote" id="btn-vote-next" onclick="goConfirm()">✅ ยืนยันการเลือก →</button>
+    <div id="confirmCard" class="card confirmbox" style="display:none;">
+      <p>You claimed</p>
+      <p class="big" id="confirmBagNum"></p>
+      <p style="color:var(--ink-soft);font-size:14px;">Look at the big screen for the reveal 🎉</p>
     </div>
   </div>
 </div>
-
-<div id="screen-confirm" class="screen">
-  <h2 class="confirm-title">ตรวจสอบการลงคะแนน</h2>
-  <div class="confirm-card">
-    <div id="confirm-photo-wrap"></div>
-    <div class="confirm-info">
-      <div class="confirm-num-label">หมายเลขผู้สมัคร</div>
-      <div class="confirm-num-big" id="confirm-num"></div>
-      <div class="confirm-name-big" id="confirm-name"></div>
-      <div class="confirm-class-txt" id="confirm-class"></div>
-    </div>
-  </div>
-  <div class="confirm-warn">⚠️ เมื่อกดยืนยันแล้ว <strong>จะไม่สามารถเปลี่ยนแปลงได้</strong></div>
-  <div class="confirm-btns">
-    <button class="btn-back" onclick="showScreen('screen-vote')">← กลับแก้ไข</button>
-    <button class="btn-confirm-final" id="btn-confirm-final" onclick="castVote(false)">✅ ยืนยัน ลงคะแนน</button>
-  </div>
-</div>
-
-<div id="screen-abstain" class="screen">
-  <div class="abstain-icon">🚫</div>
-  <div class="abstain-title">งดออกเสียง</div>
-  <div class="abstain-sub">คุณกำลังจะ<strong>งดออกเสียง</strong>ในการเลือกตั้งครั้งนี้<br>เมื่อยืนยันแล้วจะไม่สามารถกลับมาเลือกได้</div>
-  <div class="confirm-warn" style="max-width:480px;text-align:left;margin-bottom:24px;">⚠️ การงดออกเสียงจะถูกบันทึกเป็นสถิติ แต่ไม่นับเป็นคะแนนให้ผู้สมัครคนใด</div>
-  <div class="confirm-btns" style="max-width:480px;width:100%;">
-    <button class="btn-back" onclick="showScreen('screen-vote')">← กลับเลือกใหม่</button>
-    <button class="btn-confirm-final" id="btn-abstain-final" onclick="castVote(true)">ยืนยัน งดออกเสียง</button>
-  </div>
-</div>
-
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, runTransaction, onSnapshot, getDoc, setDoc }
-  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-
-// ══════════════════════════════════════
-// 🔧 CONFIG — แก้ตรงนี้
-// ══════════════════════════════════════
-const firebaseConfig = {
-  apiKey: "AIzaSyB7JooiGxDUaK-u5qG5ZPLOa555p0XxStg",
-  authDomain: "school-election-2026-973cd.firebaseapp.com",
-  projectId: "school-election-2026-973cd",
-  storageBucket: "school-election-2026-973cd.firebasestorage.app",
-  messagingSenderId: "958050422331",
-  appId: "1:958050422331:web:d2e43879bc464fd1c3161e"
-};
-const BOOTH_PASSWORDS = {
-  "1":"booth01","2":"booth02","3":"booth03","4":"booth04",
-  "5":"booth05","6":"booth06","7":"booth07","8":"booth08"
-};
-const CANDIDATES = [
-  { id:1, number:1, name:"มาริตา คล่องวิจักษณ์",        class:"พรรคชมสิ่งสวยงามสักครู่", photoUrl:"https://res.cloudinary.com/dgu19z5ay/image/upload/v1781748465/01_ewgxgv.png", color:"#0a3d91" },
-  { id:2, number:2, name:"ซันดร้า แวน เอเพ็น", class:"พรรคพูดจริงทำจริงไม่โม้", photoUrl:"https://res.cloudinary.com/dgu19z5ay/image/upload/v1781748465/02_xoh4cy.png", color:"#c0182a" },
-  { id:3, number:3, name:"กัญญาณัฐ ศรีกัลยา",     class:"พรรคธีร์", photoUrl:"https://res.cloudinary.com/dgu19z5ay/image/upload/v1781748465/03_jbntjw.png", color:"#0891b2" },
-  { id:4, number:4, name:"ธัญชนก สันรัมย์",        class:"พรรคใจจากเค้ามาเลือกเรานะ", photoUrl:"https://res.cloudinary.com/dgu19z5ay/image/upload/v1781748465/04_ntyzlw.png", color:"#7c3aed" },
-  { id:5, number:5, name:"ชญาณิศา อ่อนนวล",       class:"พรรค แอส-แตร์-เวอ-นีร์", photoUrl:"https://res.cloudinary.com/dgu19z5ay/image/upload/v1781748465/05_jpb6qv.png", color:"#059669" },
-  { id:6, number:6, name:"โชติมา แสงสมชัยพิพัฒน์",   class:"พรรคนี้พี่เบียว", photoUrl:"https://res.cloudinary.com/dgu19z5ay/image/upload/v1781748465/06_vwbynv.png", color:"#d97706" },
-];
-// ══════════════════════════════════════
-
-const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
-
-// ── state ทั้งหมดใน module นี้ scope เดียว ──────
-let boothId      = null;
-let currentRound = 1;
-let roundUnsub   = null;
-let hasVoted     = false; // ป้องกันโหวตซ้ำในรอบเดียวกัน
-
-// ── expose ให้ UI script ใช้ ────────────────────
-window.CANDIDATES = CANDIDATES;
-
-// ── helper: เขียนสถานะคูหา ─────────────────────
-function setBoothStatus(status) {
-  if (!boothId) return;
-  setDoc(doc(db, "booths", `booth_${boothId}`), {
-    unlocked: true, boothStatus: status
-  }, { merge: true });
-}
-
-// ── helper: แสดง waiting overlay ───────────────
-function showWaiting(title, sub) {
-  document.getElementById('waiting-title').textContent = title;
-  document.getElementById('waiting-sub').textContent   = sub;
-  document.getElementById('screen-waiting').classList.add('active');
-  document.getElementById('screen-voted').classList.remove('active');
-}
-
-// ── subscribe รอบปัจจุบัน ──────────────────────
-function subscribeRound() {
-  if (roundUnsub) roundUnsub();
-  roundUnsub = onSnapshot(doc(db, "rounds", `round_${currentRound}`), snap => {
-    const data   = snap.exists() ? snap.data() : {};
-    const status = data.status || 'idle';
-
-    if (status === 'voting') {
-      document.getElementById('screen-waiting').classList.remove('active');
-      // ถ้ายังไม่โหวตในรอบนี้ → แสดงหน้าเลือก
-      if (!hasVoted && !document.getElementById('screen-voted').classList.contains('active')) {
-        showScreen('screen-vote');
-        setBoothStatus('voting'); // แสดงสถานะ "กำลังโหวต" บน admin
-      }
-    } else if (status === 'approved') {
-      showWaiting('✅ รอบนี้เสร็จสิ้น', 'รอเจ้าหน้าที่เตรียมรอบถัดไป');
-    } else if (status === 'rejected') {
-      hasVoted = false;
-      document.getElementById('screen-voted').classList.remove('active');
-      // แสดงหน้ารอ ไม่ใช่หน้าโหวต — รอ admin กด เปิดคูหา
-      showWaiting('พร้อมแล้ว', 'รอเจ้าหน้าที่กดเปิดคูหาเพื่อเริ่มการโหวตใหม่');
-      setBoothStatus('ready');
-    } else if (status === 'waiting') {
-      showWaiting('กรุณารอสักครู่', 'รอเจ้าหน้าที่เตรียมระบบสำหรับรอบถัดไป');
-    } else {
-      // idle
-      showWaiting('พร้อมแล้ว', 'รอเจ้าหน้าที่กดเริ่มรอบการลงคะแนน');
-    }
-  });
-
-  // subscribe settings เพื่อตาม round ใหม่
-  onSnapshot(doc(db, "settings", "election"), snap => {
-    if (!snap.exists()) return;
-    const r = snap.data().currentRound || 1;
-    if (r !== currentRound) {
-      currentRound = r;
-      hasVoted     = false; // รอบใหม่ reset voted flag
-      subscribeRound();
-    }
-  });
-}
-
-// ── ปลดล็อก ──────────────────────────────────
-window.tryUnlock = async function() {
-  const booth = document.getElementById('booth-select').value;
-  const pass  = document.getElementById('lock-pass').value;
-  const errEl = document.getElementById('lock-err');
-  if (!booth) { errEl.textContent = 'กรุณาเลือกหมายเลขคูหา'; return; }
-  if (!pass)  { errEl.textContent = 'กรุณากรอกรหัสผ่าน'; return; }
-  if (pass !== BOOTH_PASSWORDS[booth]) { errEl.textContent = '❌ รหัสผ่านไม่ถูกต้อง'; return; }
-
-  // ข้อ 2: เช็คว่าคูหานี้ถูกใช้งานอยู่แล้วหรือเปล่า
-  try {
-    const existing = await getDoc(doc(db, "booths", `booth_${booth}`));
-    if (existing.exists() && existing.data().unlocked && existing.data().boothStatus !== 'locked') {
-      errEl.textContent = '⚠️ คูหานี้ถูกปลดล็อกไปแล้ว กรุณาติดต่อเจ้าหน้าที่';
-      return;
-    }
-  } catch(e) {}
-
-  boothId = booth;
-  sessionStorage.setItem('boothId', boothId);
-  document.getElementById('screen-lock').classList.remove('active');
-  document.getElementById('booth-badge').textContent = `คูหาที่ ${boothId}`;
-  await setDoc(doc(db, "booths", `booth_${boothId}`), {
-    unlocked: true, boothStatus: 'ready', unlockedAt: new Date().toISOString()
-  }, { merge: true });
-  await initVoting();
-};
-
-// ── restore session ────────────────────────────
-window.restoreSession = async function() {
-  const saved = sessionStorage.getItem('boothId');
-  if (!saved) return;
-
-  // เช็ค Firestore ก่อนเสมอ ว่าคูหานี้ยัง unlocked อยู่มั้ย
-  try {
-    const snap = await getDoc(doc(db, "booths", `booth_${saved}`));
-    if (!snap.exists() || snap.data().unlocked !== true) {
-      // Admin reset แล้ว — ล้าง session และกลับ lock screen
-      sessionStorage.removeItem('boothId');
-      return;
-    }
-  } catch(e) {
-    // ถ้าเชื่อมต่อไม่ได้ ให้ล้าง session ไว้ก่อน
-    sessionStorage.removeItem('boothId');
-    return;
-  }
-
-  boothId = saved;
-  document.getElementById('screen-lock').classList.remove('active');
-  document.getElementById('booth-badge').textContent = `คูหาที่ ${boothId}`;
-  await setDoc(doc(db, "booths", `booth_${boothId}`), {
-    unlocked: true, boothStatus: 'ready', unlockedAt: new Date().toISOString()
-  }, { merge: true });
-  await initVoting();
-};
-
-async function initVoting() {
-  try {
-    const snap = await getDoc(doc(db, "settings", "election"));
-    if (snap.exists()) currentRound = snap.data().currentRound || 1;
-  } catch(e) {}
-  subscribeRound();
-  subscribeBoothLock(); // ฟัง Firestore ถ้า Admin reset
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'boothId' && !e.newValue) lockBooth();
-  });
-}
-
-// subscribe สถานะคูหาตัวเอง — ถ้า Admin reset จะ lock ทันที
-function subscribeBoothLock() {
-  if (!boothId) return;
-  onSnapshot(doc(db, "booths", `booth_${boothId}`), snap => {
-    if (!snap.exists()) return;
-    const data = snap.data();
-    // ถ้า unlocked กลายเป็น false → Admin reset → lock ทันที
-    if (data.unlocked === false || data.boothStatus === 'locked') {
-      sessionStorage.removeItem('boothId');
-      lockBooth();
-    }
-  });
-}
-
-// ล็อกคูหา — เมื่อ session หมดหรือถูกล้าง
-function lockBooth() {
-  if (boothId) {
-    setDoc(doc(db, "booths", `booth_${boothId}`), {
-      unlocked: false, boothStatus: 'locked'
-    }, { merge: true });
-  }
-  boothId  = null;
-  hasVoted = false;
-  document.getElementById('screen-lock').classList.add('active');
-  document.getElementById('screen-waiting').classList.remove('active');
-  document.getElementById('screen-voted').classList.remove('active');
-  document.getElementById('booth-badge').textContent = 'คูหา —';
-  document.getElementById('booth-select').value = '';
-  document.getElementById('lock-pass').value    = '';
-}
-
-// ── cast vote ──────────────────────────────────
-window.castVoteFirebase = async function(candidateId, isAbstain) {
-  const roundRef = doc(db, "rounds", `round_${currentRound}`);
-  await runTransaction(db, async tx => {
-    const snap = await tx.get(roundRef);
-    const cur  = snap.exists() ? snap.data() : {};
-    if (isAbstain) {
-      cur.abstain = (cur.abstain || 0) + 1;
-    } else {
-      cur[`c${candidateId}`] = (cur[`c${candidateId}`] || 0) + 1;
-    }
-    cur.total  = (cur.total  || 0) + 1;
-    cur.status = cur.status  || 'voting';
-    tx.set(roundRef, cur, { merge: true });
-  });
-  hasVoted = true;
-  setBoothStatus('voted'); // อัปเดตสถานะคูหาทันที
-};
-</script>
 
 <script>
-// ── UI Script (ไม่มี Firebase โดยตรง) ──────────
-let selectedId = null;
+const bags = [
+  {n:1, ratio:"JP2:TH1"},{n:2, ratio:"JP2:TH1"},{n:3, ratio:"JP2:TH1"},{n:4, ratio:"JP2:TH1"},
+  {n:5, ratio:"JP2:TH1"},{n:6, ratio:"JP2:TH1"},{n:7, ratio:"JP2:TH1"},{n:8, ratio:"JP2:TH1"},
+  {n:9, ratio:"TH2:JP1"},{n:10, ratio:"TH2:JP1"},{n:11, ratio:"TH2:JP1"},{n:12, ratio:"TH2:JP1"},
+  {n:13, ratio:"TH2:JP1"},{n:14, ratio:"TH2:JP1"},{n:15, ratio:"TH2:JP1"},{n:16, ratio:"TH2:JP1"},
+];
 
-function renderCandidates() {
-  const grid = document.getElementById('candidates-grid');
-  grid.innerHTML = (window.CANDIDATES||[]).map(c => {
-    const initial   = c.name.charAt(2)||c.name.charAt(0);
-    const photoHtml = c.photoUrl
-      ? `<img src="${c.photoUrl}" class="candidate-photo" alt="${c.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-      : '';
-    const phStyle = c.photoUrl ? 'display:none' : '';
-    return `<div class="candidate-card" id="card-${c.id}" onclick="selectCandidate(${c.id})">
-      <div class="candidate-circle" style="border-color:${c.color}44;">
-        ${photoHtml}
-        <div class="candidate-photo-placeholder" style="${phStyle};background:linear-gradient(135deg,${c.color}99,${c.color}ee)">${initial}</div>
-        <div class="candidate-num" style="background:${c.color}">${c.number}</div>
-      </div>
-      <div class="candidate-info-bar">
-        <div class="candidate-name">${c.name}</div>
-        <div class="candidate-class">${c.class}</div>
-      </div>
-    </div>`;
+let db, teamId, teamName, myQuestionIndex = -1, hasAnsweredThisRound = false, bagsClaimed = {};
+
+function slugify(s){
+  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'team';
+}
+
+document.getElementById('joinBtn').onclick = () => {
+  const name = document.getElementById('teamNameInput').value.trim();
+  if (!name){ document.getElementById('joinStatus').textContent = "Enter a team name first."; return; }
+  let cfg;
+  try { cfg = JSON.parse(document.getElementById('cfgInput').value); }
+  catch(e){ document.getElementById('joinStatus').textContent = "Firebase config isn't valid JSON — check with your teacher."; return; }
+
+  // reuse saved identity on refresh
+  const saved = localStorage.getItem('wyi_team');
+  if (saved){
+    const parsed = JSON.parse(saved);
+    teamId = parsed.teamId; teamName = parsed.teamName;
+  } else {
+    teamId = slugify(name) + '-' + Math.random().toString(36).slice(2,6);
+    teamName = name;
+    localStorage.setItem('wyi_team', JSON.stringify({teamId, teamName}));
+  }
+
+  firebase.initializeApp(cfg);
+  db = firebase.database();
+  db.ref('/teams/' + teamId).set({ name: teamName, hasBag: false, bagNum: null });
+  document.getElementById('teamNameLabel').textContent = teamName;
+  document.getElementById('joinCard').style.display = 'none';
+  document.getElementById('gameArea').style.display = 'block';
+  listenToGame();
+};
+
+function listenToGame(){
+  db.ref('/bags').on('value', snap => { bagsClaimed = snap.val() || {}; });
+
+  db.ref('/session/phase').on('value', snap => {
+    const phase = snap.val();
+    hide(['waitingCard','questionCard','feedbackCard','pickingCard','confirmCard']);
+    if (phase === 'question'){
+      db.ref('/session/question').once('value', qsnap => showQuestion(qsnap.val()));
+    } else if (phase === 'results'){
+      show('feedbackCard');
+    } else if (phase === 'picking'){
+      db.ref('/session/pickTurnTeamId').once('value', tsnap => {
+        if (tsnap.val() === teamId){
+          renderBagGrid();
+          show('pickingCard');
+        } else {
+          document.getElementById('waitingText').textContent = "🎉 Another team is picking a bag right now. Watch the big screen!";
+          show('waitingCard');
+        }
+      });
+    } else {
+      document.getElementById('waitingText').textContent = "Waiting for the host to start the next question…";
+      show('waitingCard');
+    }
+  });
+
+  // track which question index is live, and whether we've answered it
+  db.ref('/session/questionIndex').on('value', snap => {
+    const idx = snap.val();
+    if (typeof idx === 'number' && idx !== myQuestionIndex){
+      myQuestionIndex = idx;
+      hasAnsweredThisRound = false;
+    }
+  });
+
+  db.ref('/session/results').on('value', snap => {
+    const results = snap.val() || {};
+    const idx = myQuestionIndex;
+    const r = results[idx];
+    if (!r) return;
+    const rank = r.ranking.indexOf(teamId);
+    const el = document.getElementById('feedbackText');
+    if (rank === -1){
+      el.textContent = "❌ Not this time. Next question coming up!";
+      el.className = "feedback bad";
+    } else {
+      el.textContent = `✅ Correct! You were #${rank+1} fastest.`;
+      el.className = "feedback good";
+    }
+  });
+
+  db.ref('/teams/' + teamId).on('value', snap => {
+    const t = snap.val();
+    if (t && t.hasBag && t.bagNum){
+      hide(['waitingCard','questionCard','feedbackCard','pickingCard']);
+      document.getElementById('confirmBagNum').textContent = 'Bag #' + t.bagNum;
+      show('confirmCard');
+    }
+  });
+}
+
+function showQuestion(q){
+  if (!q) return;
+  document.getElementById('qText').textContent = q.text;
+  const opts = document.getElementById('qOpts');
+  opts.innerHTML = q.options.map((o,i) => `<button class="optbtn" data-i="${i}">${o}</button>`).join('');
+  opts.querySelectorAll('.optbtn').forEach(btn => {
+    btn.onclick = () => submitAnswer(+btn.dataset.i, opts);
+  });
+  show('questionCard');
+}
+
+function submitAnswer(i, opts){
+  if (hasAnsweredThisRound) return;
+  hasAnsweredThisRound = true;
+  opts.querySelectorAll('.optbtn').forEach(b => { b.disabled = true; if (+b.dataset.i === i) b.classList.add('selected'); });
+  db.ref('/session/answers/' + myQuestionIndex + '/' + teamId).set({
+    optionIndex: i,
+    ts: firebase.database.ServerValue.TIMESTAMP
+  });
+}
+
+function renderBagGrid(){
+  const grid = document.getElementById('bagGrid');
+  grid.innerHTML = bags.map(b => {
+    const taken = !!bagsClaimed[b.n];
+    const ratioClass = b.ratio.startsWith('JP2') ? 'jp2' : 'th2';
+    return `<button class="bagbtn ${ratioClass} ${taken?'taken':''}" data-n="${b.n}" ${taken?'disabled':''}>
+      <span>${b.n}</span><span class="r">${b.ratio}</span>
+    </button>`;
   }).join('');
+  grid.querySelectorAll('.bagbtn').forEach(btn => {
+    btn.onclick = () => claimBag(+btn.dataset.n);
+  });
 }
 
-function selectCandidate(id) {
-  selectedId = id;
-  document.querySelectorAll('.candidate-card').forEach(el => el.classList.remove('selected'));
-  document.getElementById(`card-${id}`)?.classList.add('selected');
-  document.getElementById('btn-vote-next').classList.add('ready');
+function claimBag(n){
+  const ref = db.ref('/bags/' + n);
+  ref.transaction(current => current === null ? teamId : undefined, (error, committed) => {
+    if (committed){
+      document.getElementById('confirmBagNum').textContent = 'Bag #' + n;
+      hide(['pickingCard']);
+      show('confirmCard');
+    } else {
+      renderBagGrid(); // someone else got it first — refresh
+    }
+  });
 }
 
-function goConfirm() {
-  if (!selectedId) return;
-  const c = (window.CANDIDATES||[]).find(x => x.id === selectedId);
-  if (!c) return;
-  const wrap = document.getElementById('confirm-photo-wrap');
-  const initial = c.name.charAt(2)||c.name.charAt(0);
-  wrap.innerHTML = c.photoUrl
-    ? `<img src="${c.photoUrl}" class="confirm-photo" alt="${c.name}">`
-    : `<div class="confirm-photo-placeholder" style="border-color:${c.color};background:linear-gradient(135deg,${c.color}55,${c.color}99)">${initial}</div>`;
-  document.getElementById('confirm-num').textContent   = `หมายเลข ${c.number}`;
-  document.getElementById('confirm-num').style.color   = c.color;
-  document.getElementById('confirm-name').textContent  = c.name;
-  document.getElementById('confirm-class').textContent = c.class;
-  showScreen('screen-confirm');
-}
-
-function goAbstain() { showScreen('screen-abstain'); }
-
-async function castVote(isAbstain) {
-  const btnId = isAbstain ? 'btn-abstain-final' : 'btn-confirm-final';
-  const btn   = document.getElementById(btnId);
-  btn.disabled    = true;
-  btn.textContent = 'กำลังบันทึก...';
-  // iOS: unlock audio context ทันทีที่ user gesture
-  if (window.speechSynthesis) {
-    window.speechSynthesis.cancel();
-    const warmup = new SpeechSynthesisUtterance('');
-    window.speechSynthesis.speak(warmup);
-  }
-  try {
-    await window.castVoteFirebase(isAbstain ? null : selectedId, isAbstain);
-    // reset UI
-    selectedId = null;
-    document.querySelectorAll('.candidate-card').forEach(el => el.classList.remove('selected'));
-    document.getElementById('btn-vote-next').classList.remove('ready');
-    btn.disabled    = false;
-    btn.textContent = isAbstain ? 'ยืนยัน งดออกเสียง' : '✅ ยืนยัน ลงคะแนน';
-    // แสดง voted overlay
-    document.getElementById('voted-icon').textContent  = isAbstain ? '🚫' : '✅';
-    document.getElementById('voted-title').textContent = isAbstain ? 'งดออกเสียงสำเร็จ' : 'ลงคะแนนสำเร็จแล้ว!';
-    document.getElementById('voted-sub').textContent   = isAbstain
-      ? 'ได้รับการบันทึกการงดออกเสียงแล้ว\nกรุณารอเจ้าหน้าที่ดำเนินการต่อ'
-      : 'ขอบคุณที่ร่วมใช้สิทธิ์ในการเลือกตั้ง\nกรุณารอเจ้าหน้าที่ดำเนินการต่อ';
-    document.getElementById('screen-voted').classList.add('active');
-    // Text-to-Speech
-    speakVoted(isAbstain);
-    document.getElementById('screen-waiting').classList.remove('active');
-  } catch(e) {
-    alert('เกิดข้อผิดพลาด กรุณาลองใหม่');
-    btn.disabled    = false;
-    btn.textContent = isAbstain ? 'ยืนยัน งดออกเสียง' : '✅ ยืนยัน ลงคะแนน';
-  }
-}
-
-function speakVoted(isAbstain) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const msg = new SpeechSynthesisUtterance('ลงคะแนนเรียบร้อยแล้วครับ ขอบคุณครับ');
-  msg.lang  = 'th-TH';
-  msg.rate  = 0.9;
-  msg.pitch = 1.0;
-  // ลองหาเสียงภาษาไทยก่อน
-  const voices = window.speechSynthesis.getVoices();
-  const thVoice = voices.find(v => v.lang === 'th-TH' || v.lang === 'th');
-  if (thVoice) msg.voice = thVoice;
-  window.speechSynthesis.speak(msg);
-}
-
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id)?.classList.add('active');
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  // โหลด voices ล่วงหน้า (Chrome)
-  if (window.speechSynthesis) {
-    window.speechSynthesis.getVoices();
-    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-  }
-  renderCandidates();
-  window.restoreSession();
-});
+function hide(ids){ ids.forEach(id => document.getElementById(id).style.display = 'none'); }
+function show(id){ document.getElementById(id).style.display = 'block'; }
 </script>
 </body>
 </html>
