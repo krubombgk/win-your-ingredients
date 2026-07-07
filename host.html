@@ -64,6 +64,7 @@
   .ribbon{ position:absolute; top:0; left:50%; transform:translateX(-50%); width:22px; height:28px; border-radius:0 0 5px 5px; }
   .bag.jp2 .ribbon{ background:var(--flag-red);} .bag.th2 .ribbon{ background:var(--flag-blue);}
   .bag.claimed{ background:linear-gradient(160deg,#EEF1EA 0%, #E1E7DA 100%); border-color:var(--claimed); }
+  .bag.claimed:hover{ transform:translateY(-3px); box-shadow:var(--shadow); transition:transform .15s ease, box-shadow .15s ease; }
   .bag .stamp{ font-family:'Kanit',sans-serif; font-weight:600; font-size:9.5px; color:#fff; background:var(--claimed); padding:2px 6px; border-radius:10px; margin-top:4px; max-width:90%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .bag.picking{ outline:3px solid var(--fusion-gold); }
 
@@ -467,13 +468,21 @@ function renderBagGrid(){
     const claimedTid = bagsClaimed[b.n];
     const claimedName = claimedTid && teams[claimedTid] ? teams[claimedTid].name : claimedTid;
     const ratioClass = b.ratio.startsWith('JP2') ? 'jp2' : 'th2';
-    return `<div class="bag ${ratioClass} ${claimedTid?'claimed':''}">
+    return `<div class="bag ${ratioClass} ${claimedTid?'claimed':''}" data-n="${b.n}" data-claimed="${claimedTid?'1':'0'}" style="${claimedTid?'cursor:pointer;':''}">
       <div class="ribbon"></div>
       <div class="n">${b.n}</div>
       <div class="r">${b.ratio}</div>
       ${claimedTid ? `<div class="stamp">${claimedName}</div>` : ''}
     </div>`;
   }).join('');
+  grid.querySelectorAll('.bag[data-claimed="1"]').forEach(el => {
+    el.onclick = () => {
+      const n = +el.dataset.n;
+      const tid = bagsClaimed[n];
+      const name = (teams[tid] && teams[tid].name) || tid;
+      showReveal(n, name);
+    };
+  });
   const count = Object.keys(bagsClaimed).length;
   document.getElementById('progressLabel').textContent = `Bags claimed ${count}/16`;
   const track = document.getElementById('riceTrack');
