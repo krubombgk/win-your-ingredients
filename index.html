@@ -53,6 +53,10 @@
 
   .confirmbox{ text-align:center; }
   .confirmbox .big{ font-family:'Kanit',sans-serif; font-size:26px; font-weight:700; color:var(--claimed); margin:10px 0;}
+  .ingrow{ background:var(--paper-dark); border-radius:10px; padding:10px 12px; margin-bottom:8px; }
+  .ingrow-top{ display:flex; align-items:center; gap:8px; font-family:'Kanit',sans-serif; font-size:15px; }
+  .ingrow-top .role{ margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; }
+  .ingrow-detail{ font-size:12.5px; color:var(--ink-soft); margin-top:3px; line-height:1.4; }
 </style>
 </head>
 <body>
@@ -63,8 +67,6 @@
   <div id="joinCard" class="card">
     <h2>Join your team</h2>
     <input type="text" id="teamNameInput" placeholder="Team name (e.g. Sakura Squad)" maxlength="30">
-    <label style="display:block;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-soft);margin:14px 0 5px;">Firebase config (paste exactly what your teacher sent — the whole snippet is fine)</label>
-    <textarea id="cfgInput" rows="5" style="width:100%;font-family:'JetBrains Mono',monospace;font-size:11px;padding:8px;border-radius:8px;border:1px solid #D8CAA6;" placeholder='const firebaseConfig = { apiKey: "...", databaseURL: "..." };'></textarea>
     <button class="bigbtn" id="joinBtn">Join game</button>
     <p id="joinStatus" style="text-align:center;color:var(--ink-soft);font-size:12.5px;margin-top:10px;"></p>
   </div>
@@ -93,20 +95,94 @@
     <div id="confirmCard" class="card confirmbox" style="display:none;">
       <p>You claimed</p>
       <p class="big" id="confirmBagNum"></p>
-      <p style="color:var(--ink-soft);font-size:14px;">Look at the big screen for the reveal 🎉</p>
+      <div id="confirmIngList" style="text-align:left;margin-top:14px;"></div>
+      <p style="color:var(--ink-soft);font-size:13px;margin-top:14px;">Look at the big screen for the full reveal 🎉</p>
     </div>
   </div>
 </div>
 
 <script>
 const bags = [
-  {n:1, ratio:"JP2:TH1"},{n:2, ratio:"JP2:TH1"},{n:3, ratio:"JP2:TH1"},{n:4, ratio:"JP2:TH1"},
-  {n:5, ratio:"JP2:TH1"},{n:6, ratio:"JP2:TH1"},{n:7, ratio:"JP2:TH1"},{n:8, ratio:"JP2:TH1"},
-  {n:9, ratio:"TH2:JP1"},{n:10, ratio:"TH2:JP1"},{n:11, ratio:"TH2:JP1"},{n:12, ratio:"TH2:JP1"},
-  {n:13, ratio:"TH2:JP1"},{n:14, ratio:"TH2:JP1"},{n:15, ratio:"TH2:JP1"},{n:16, ratio:"TH2:JP1"},
+  {n:1, ratio:"JP2:TH1", items:["Akitakomachi Rice","Betong Chicken","Uji Matcha"]},
+  {n:2, ratio:"JP2:TH1", items:["Sanuki Udon","Giant River Prawn","Yubari Melon"]},
+  {n:3, ratio:"JP2:TH1", items:["Mochi Rice","Phon Yang Kham Beef","Mikan"]},
+  {n:4, ratio:"JP2:TH1", items:["Shinshu Soba","Mud Crab","Amaou Strawberries"]},
+  {n:5, ratio:"JP2:TH1", items:["Hokkaido Potatoes","Mackerel","Fuku (Pufferfish)"]},
+  {n:6, ratio:"JP2:TH1", items:["Satsuma Sweet Potato","Salted Egg","Kaki no Tane"]},
+  {n:7, ratio:"JP2:TH1", items:["Uonuma Koshihikari","Betong Chicken","Nori Chips"]},
+  {n:8, ratio:"JP2:TH1", items:["Joshu Konjac","Phon Yang Kham Beef","Natto"]},
+  {n:9, ratio:"TH2:JP1", items:["Jasmine Rice","Kobe Beef","Monthong Durian"]},
+  {n:10, ratio:"TH2:JP1", items:["Sticky Rice","Snow Crab","Nam Dok Mai Mango"]},
+  {n:11, ratio:"TH2:JP1", items:["Rice Noodles","Oysters","Longan"]},
+  {n:12, ratio:"TH2:JP1", items:["Khanom Jeen","Hinai Jidori Chicken","Kung Chom"]},
+  {n:13, ratio:"TH2:JP1", items:["Taro","Katsuo","Sweet Tamarind"]},
+  {n:14, ratio:"TH2:JP1", items:["Sweet Potato","Tofu","Coconut Sugar"]},
+  {n:15, ratio:"TH2:JP1", items:["Jasmine Rice","Sakura Shrimp","Thai Tea Leaves"]},
+  {n:16, ratio:"TH2:JP1", items:["Sticky Rice","Hokkaido Salmon","Kanom Mo Kaeng"]},
 ];
+const ROLE_BY_SLOT = ["Carbohydrate","Protein","Delicacy"];
+const FLAG_EMOJI = { jp:"🇯🇵", th:"🇹🇭" };
+const D = {
+  "Akitakomachi Rice": {flag:"jp", region:"Akita", desc:"Tender, delicious, glossy sweet rice", price:"¥700–900/kg"},
+  "Sanuki Udon": {flag:"jp", region:"Kagawa", desc:"Most famous chewy udon noodles", price:"¥250–500/300g"},
+  "Mochi Rice": {flag:"jp", region:"Niigata", desc:"Premium glutinous rice for mochi", price:"¥800/kg"},
+  "Shinshu Soba": {flag:"jp", region:"Nagano", desc:"Most famous buckwheat noodles", price:"¥350–700/200g"},
+  "Hokkaido Potatoes": {flag:"jp", region:"Hokkaido", desc:"Famous for being large and sweet", price:"¥250–450/kg"},
+  "Satsuma Sweet Potato": {flag:"jp", region:"Kagoshima", desc:"Sweet fluffy potatoes, used in desserts", price:"¥250–450/kg"},
+  "Uonuma Koshihikari": {flag:"jp", region:"Niigata", desc:"Premium rice known for sweetness and texture", price:"¥1,000/kg"},
+  "Joshu Konjac": {flag:"jp", region:"Gunma", desc:"Low-carb food made from konjac", price:"¥150–300/block"},
+  "Jasmine Rice": {flag:"th", region:"Surin / Roi Et", desc:"Fragrant Thai rice, soft and aromatic", price:"฿40–70/kg"},
+  "Sticky Rice": {flag:"th", region:"Chiang Mai", desc:"Glutinous rice commonly eaten in Northern Thailand", price:"฿35–60/kg"},
+  "Rice Noodles": {flag:"th", region:"Chanthaburi", desc:"Thin rice noodles used in Pad Thai and other Thai dishes", price:"฿25–50/pack"},
+  "Khanom Jeen": {flag:"th", region:"Nakhon Si Thammarat", desc:"Fresh fermented rice noodles", price:"฿20–40/pack"},
+  "Taro": {flag:"th", region:"Phetchaburi", desc:"Starchy root used in desserts and snacks", price:"฿40–80/kg"},
+  "Sweet Potato": {flag:"th", region:"Phitsanulok", desc:"Sweet, soft potatoes often steamed or baked", price:"฿30–60/kg"},
+  "Betong Chicken": {flag:"th", region:"Yala", desc:"Premium free-range chicken, famous for its tender and juicy meat", price:"฿250–400/kg"},
+  "Giant River Prawn": {flag:"th", region:"Ayutthaya", desc:"Large freshwater prawns, often grilled", price:"฿600–1,200/kg"},
+  "Phon Yang Kham Beef": {flag:"th", region:"Sakon Nakhon", desc:"Premium Thai beef known for its tenderness and rich flavor", price:"฿600–1,500/kg"},
+  "Mud Crab": {flag:"th", region:"Surat Thani", desc:"Popular seafood with sweet meat", price:"฿500–1,000/kg"},
+  "Mackerel": {flag:"th", region:"Samut Songkhram", desc:"Famous Thai fish, often eaten with chili paste", price:"฿40–80/pair"},
+  "Salted Egg": {flag:"th", region:"Chaiya, Surat Thani", desc:"Well-known salted eggs used in many Thai dishes", price:"฿60–120/pack"},
+  "Kobe Beef": {flag:"jp", region:"Hyogo", desc:"World-famous wagyu beef", price:"¥5,000–10,000/100g"},
+  "Snow Crab": {flag:"jp", region:"Tottori", desc:"Popular winter seafood", price:"¥2,000–5,000/each"},
+  "Oysters": {flag:"jp", region:"Hiroshima", desc:"Japan's largest oyster-producing prefecture", price:"¥600–1,200/pack"},
+  "Hinai Jidori Chicken": {flag:"jp", region:"Akita", desc:"Premium native chicken", price:"¥700–1,200/500g"},
+  "Katsuo": {flag:"jp", region:"Kochi", desc:"Famous for seared bonito (skipjack tuna)", price:"¥500–900/200g"},
+  "Tofu": {flag:"jp", region:"Kyoto", desc:"Silky and delicate tofu", price:"¥150–300/block"},
+  "Sakura Shrimp": {flag:"jp", region:"Suruga Bay", desc:"Tiny pink shrimp unique to the bay", price:"¥800–1,500/100g"},
+  "Hokkaido Salmon": {flag:"jp", region:"Hokkaido", desc:"Japan's largest producer of wild Pacific salmon", price:"¥500–900/200g fillet"},
+  "Uji Matcha": {flag:"jp", region:"Kyoto", desc:"Premium green tea powder", price:"¥1,000–3,000/30g"},
+  "Yubari Melon": {flag:"jp", region:"Hokkaido", desc:"Luxury orange-fleshed melon", price:"¥2,000–10,000/each"},
+  "Mikan": {flag:"jp", region:"Wakayama", desc:"Sweet Japanese citrus", price:"¥400–800/kg"},
+  "Amaou Strawberries": {flag:"jp", region:"Fukuoka", desc:"Large, sweet premium strawberries", price:"¥800–1,500/pack"},
+  "Fuku (Pufferfish)": {flag:"jp", region:"Yamaguchi", desc:"Luxury fish prepared by licenced chefs", price:"¥3,000–10,000/portion"},
+  "Kaki no Tane": {flag:"jp", region:"Niigata", desc:"Rice crackers with peanuts", price:"¥250–500/bag"},
+  "Nori Chips": {flag:"jp", region:"Saga", desc:"Roasted seaweed snacks", price:"¥200–500/bag"},
+  "Natto": {flag:"jp", region:"Ibaraki", desc:"Fermented soybeans with a sticky texture", price:"¥120–250/3-pack"},
+  "Monthong Durian": {flag:"th", region:"Chanthaburi", desc:"Sweet and creamy premium Thai durian", price:"฿150–300/kg"},
+  "Nam Dok Mai Mango": {flag:"th", region:"Chachoengsao", desc:"Sweet golden mango, famous with sticky rice", price:"฿60–150/kg"},
+  "Longan": {flag:"th", region:"Lamphun", desc:"Sweet juicy fruit from Northern Thailand", price:"฿40–100/kg"},
+  "Kung Chom": {flag:"th", region:"Prakhon Chai, Buriram", desc:"Traditional fermented shrimp delicacy with a rich umami flavor", price:"฿80–200/jar"},
+  "Sweet Tamarind": {flag:"th", region:"Phetchabun", desc:"Naturally sweet tamarind, popular as a snack", price:"฿80–180/kg"},
+  "Coconut Sugar": {flag:"th", region:"Samut Songkhram", desc:"Natural sugar made from coconut palm", price:"฿50–120/jar"},
+  "Thai Tea Leaves": {flag:"th", region:"Chiang Rai", desc:"Tea leaves used for authentic Thai milk tea", price:"฿80–200/pack"},
+  "Kanom Mo Kaeng": {flag:"th", region:null, desc:null, price:null}
+};
 
-let db, teamId, teamName, myQuestionIndex = -1, hasAnsweredThisRound = false, bagsClaimed = {};
+let db, teamId, teamName, myQuestionIndex = -1, hasAnsweredThisRound = false, bagsClaimed = {}, myHasBag = false;
+
+// This project's Firebase config, embedded so teams don't need to paste anything.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBWpnR24F9jagqIMxd9aV6NW-_2X8Z2jl4",
+  authDomain: "japanthaiactivity.firebaseapp.com",
+  databaseURL: "https://japanthaiactivity-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "japanthaiactivity",
+  storageBucket: "japanthaiactivity.firebasestorage.app",
+  messagingSenderId: "365138040907",
+  appId: "1:365138040907:web:0bc223bc16d4da159d95ce"
+};
+firebase.initializeApp(FIREBASE_CONFIG);
+db = firebase.database();
 
 // Accepts either strict JSON or the raw snippet Firebase Console shows
 // (e.g. "const firebaseConfig = { apiKey: \"...\", ... };" with unquoted keys).
@@ -128,9 +204,6 @@ function slugify(s){
 document.getElementById('joinBtn').onclick = () => {
   const name = document.getElementById('teamNameInput').value.trim();
   if (!name){ document.getElementById('joinStatus').textContent = "Enter a team name first."; return; }
-  let cfg;
-  try { cfg = parseFirebaseConfig(document.getElementById('cfgInput').value); }
-  catch(e){ document.getElementById('joinStatus').textContent = "Couldn't read that config — check it's the object Firebase gave you."; return; }
 
   // reuse saved identity on refresh
   const saved = localStorage.getItem('wyi_team');
@@ -143,8 +216,6 @@ document.getElementById('joinBtn').onclick = () => {
     localStorage.setItem('wyi_team', JSON.stringify({teamId, teamName}));
   }
 
-  firebase.initializeApp(cfg);
-  db = firebase.database();
   db.ref('/teams/' + teamId).set({ name: teamName, hasBag: false, bagNum: null });
   document.getElementById('teamNameLabel').textContent = teamName;
   document.getElementById('joinCard').style.display = 'none';
@@ -158,6 +229,12 @@ function listenToGame(){
   db.ref('/session/phase').on('value', snap => {
     const phase = snap.val();
     hide(['waitingCard','questionCard','feedbackCard','pickingCard','confirmCard']);
+    if (myHasBag){
+      // this team already collected its ingredients — sit out the rest of the game
+      document.getElementById('waitingText').textContent = "You already collected your ingredients! Watch the big screen and cheer for the other teams 🎉";
+      show('waitingCard');
+      return;
+    }
     if (phase === 'question'){
       db.ref('/session/question').once('value', qsnap => showQuestion(qsnap.val()));
     } else if (phase === 'results'){
@@ -205,12 +282,28 @@ function listenToGame(){
 
   db.ref('/teams/' + teamId).on('value', snap => {
     const t = snap.val();
+    myHasBag = !!(t && t.hasBag);
     if (t && t.hasBag && t.bagNum){
       hide(['waitingCard','questionCard','feedbackCard','pickingCard']);
-      document.getElementById('confirmBagNum').textContent = 'Bag #' + t.bagNum;
+      renderConfirmCard(t.bagNum);
       show('confirmCard');
     }
   });
+}
+
+function renderConfirmCard(bagNum){
+  const bag = bags.find(b => b.n === bagNum);
+  document.getElementById('confirmBagNum').textContent = 'Bag #' + bagNum;
+  const list = document.getElementById('confirmIngList');
+  if (!list || !bag) return;
+  list.innerHTML = bag.items.map((name, idx) => {
+    const d = D[name];
+    const hasData = d.region && d.desc && d.price;
+    return `<div class="ingrow">
+      <div class="ingrow-top"><span>${FLAG_EMOJI[d.flag]}</span><b>${name}</b><span class="role">${ROLE_BY_SLOT[idx]}</span></div>
+      ${hasData ? `<div class="ingrow-detail">${d.region} · ${d.desc} · ${d.price}</div>` : `<div class="ingrow-detail"><i>Details coming soon.</i></div>`}
+    </div>`;
+  }).join('');
 }
 
 function showQuestion(q){
@@ -251,13 +344,10 @@ function renderBagGrid(){
 function claimBag(n){
   const ref = db.ref('/bags/' + n);
   ref.transaction(current => current === null ? teamId : undefined, (error, committed) => {
-    if (committed){
-      document.getElementById('confirmBagNum').textContent = 'Bag #' + n;
-      hide(['pickingCard']);
-      show('confirmCard');
-    } else {
+    if (!committed){
       renderBagGrid(); // someone else got it first — refresh
     }
+    // on success, the /teams/{teamId} listener picks up hasBag+bagNum and shows confirmCard
   });
 }
 
