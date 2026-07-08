@@ -286,9 +286,10 @@ document.getElementById('joinBtn').onclick = () => {
   }
 
   // Only create a fresh record if this team doesn't already exist in the database
-  // (brand-new join, or the host did a full game reset). If this is a reconnect,
-  // this preserves hasBag/bagNum so the team keeps seeing their claimed ingredients
-  // instead of losing them.
+  // (brand-new join, the host did a full game reset, or the host removed this team
+  // to free up the slot). If this is a genuine reconnect, this preserves
+  // hasBag/bagNum so the team keeps seeing their claimed ingredients instead of
+  // losing them.
   db.ref('/teams/' + teamId).once('value', snap => {
     if (!snap.exists()){
       db.ref('/teams/' + teamId).set({ name: teamName, hasBag: false, bagNum: null });
@@ -296,12 +297,53 @@ document.getElementById('joinBtn').onclick = () => {
     document.getElementById('teamNameLabel').textContent = teamName;
     document.getElementById('joinCard').style.display = 'none';
     document.getElementById('gameArea').style.display = 'block';
-    listenToGame();
+    startPresence();
+    // Resolve our own current state FIRST, before wiring up the phase/question
+    // listeners, so a team that already has a bag never gets a split-second
+    // chance to see the live question screen while reconnecting.
+    db.ref('/teams/' + teamId).once('value', tsnap => {
+      const t = tsnap.val();
+      myHasBag = !!(t && t.hasBag);
+      myBagNum = (t && t.bagNum) || null;
+      listenToGame();
+    });
   });
 };
 
+function startPresence(){
+  const presenceRef = db.ref('/presence/' + teamId);
+  db.ref('.info/connected').on('value', snap => {
+    if (snap.val() === true){
+      presenceRef.onDisconnect().set(false);
+      presenceRef.set(true);
+    }
+  });
+}
+
 function listenToGame(){
   db.ref('/bags').on('value', snap => { bagsClaimed = snap.val() || {}; });
+
+  // If the host removes this team (freeing up the slot for a device swap),
+  // reset locally so this device can rejoin fresh instead of being stuck.
+  let hadTeamRecord = true;
+  db.ref('/teams/' + teamId).on('value', snap => {
+    const exists = snap.exists();
+    if (hadTeamRecord && !exists){
+      localStorage.removeItem('wyi_team');
+      alert("The host has removed this team from the game. You can join again.");
+      location.reload();
+      return;
+    }
+    hadTeamRecord = exists;
+    const t = snap.val();
+    myHasBag = !!(t && t.hasBag);
+    myBagNum = (t && t.bagNum) || null;
+    if (myHasBag && myBagNum){
+      hide(['waitingCard','questionCard','feedbackCard','pickingCard']);
+      renderConfirmCard(myBagNum);
+      show('confirmCard');
+    }
+  });
 
   db.ref('/session/phase').on('value', snap => {
     const phase = snap.val();
@@ -316,7 +358,7 @@ function listenToGame(){
     }
     hide(['waitingCard','questionCard','feedbackCard','pickingCard','confirmCard']);
     if (phase === 'question'){
-      db.ref('/session/question').once('value', qsnap => showQuestion(qsnap.val()));
+      loadAndShowQuestion();
     } else if (phase === 'results'){
       renderFeedback();
       show('feedbackCard');
@@ -350,7 +392,7 @@ function listenToGame(){
       // (no value change), so that listener wouldn't fire and the screen would be
       // left showing the previous question's text while accepting answers for this one.
       if (!myHasBag){
-        db.ref('/session/question').once('value', qsnap => showQuestion(qsnap.val()));
+        loadAndShowQuestion();
       }
     }
   });
@@ -359,16 +401,27 @@ function listenToGame(){
     latestResults = snap.val() || {};
     renderFeedback();
   });
+}
 
-  db.ref('/teams/' + teamId).on('value', snap => {
-    const t = snap.val();
-    myHasBag = !!(t && t.hasBag);
-    myBagNum = (t && t.bagNum) || null;
-    if (myHasBag && myBagNum){
-      hide(['waitingCard','questionCard','feedbackCard','pickingCard']);
-      renderConfirmCard(myBagNum);
-      show('confirmCard');
-    }
+// Loads the current question, displays it, and — if this team already submitted
+// an answer for it (e.g. they refreshed the page mid-question) — locks the
+// options immediately instead of letting them answer again.
+function loadAndShowQuestion(){
+  const idxAtLoad = myQuestionIndex;
+  db.ref('/session/question').once('value', qsnap => {
+    if (idxAtLoad !== myQuestionIndex) return; // question moved on while this was loading
+    showQuestion(qsnap.val());
+    db.ref('/session/answers/' + idxAtLoad + '/' + teamId).once('value', asnap => {
+      if (idxAtLoad !== myQuestionIndex) return;
+      if (asnap.exists()){
+        hasAnsweredThisRound = true;
+        myLastAnswerIndex = asnap.val().optionIndex;
+        document.querySelectorAll('#qOpts .optbtn').forEach(b => {
+          b.disabled = true;
+          if (+b.dataset.i === myLastAnswerIndex) b.classList.add('selected');
+        });
+      }
+    });
   });
 }
 
@@ -426,12 +479,19 @@ function showQuestion(q){
 
 function submitAnswer(i, opts){
   if (hasAnsweredThisRound) return;
-  hasAnsweredThisRound = true;
-  myLastAnswerIndex = i;
-  opts.querySelectorAll('.optbtn').forEach(b => { b.disabled = true; if (+b.dataset.i === i) b.classList.add('selected'); });
-  db.ref('/session/answers/' + myQuestionIndex + '/' + teamId).set({
-    optionIndex: i,
-    ts: firebase.database.ServerValue.TIMESTAMP
+  hasAnsweredThisRound = true; // lock immediately so rapid double-taps can't slip through during the round trip
+  opts.querySelectorAll('.optbtn').forEach(b => b.disabled = true);
+  const answerRef = db.ref('/session/answers/' + myQuestionIndex + '/' + teamId);
+  answerRef.once('value', snap => {
+    if (snap.exists()){
+      // Already answered this question (e.g. answered, then refreshed the page) — don't allow a retry.
+      myLastAnswerIndex = snap.val().optionIndex;
+      opts.querySelectorAll('.optbtn').forEach(b => { if (+b.dataset.i === myLastAnswerIndex) b.classList.add('selected'); });
+      return;
+    }
+    myLastAnswerIndex = i;
+    opts.querySelectorAll('.optbtn').forEach(b => { if (+b.dataset.i === i) b.classList.add('selected'); });
+    answerRef.set({ optionIndex: i, ts: firebase.database.ServerValue.TIMESTAMP });
   });
 }
 
