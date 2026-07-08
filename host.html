@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Win Your Ingredients · Host Screen</title>
+<title>Win Your Ingredients · Host Screen (v2 · team voting)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700;800&family=Sarabun:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -99,7 +99,7 @@
 </head>
 <body>
 <div class="stage">
-  <p class="eyebrow">Host Screen · share this on Zoom</p>
+  <p class="eyebrow">Host Screen · v2 · 5-member team voting · share this on Zoom</p>
   <h1><span class="r">Win Your</span> <span class="b">Ingredients</span></h1>
 
   <div id="setupPanel" class="setup" style="display:none;">
@@ -481,40 +481,53 @@ function nextQuestion(){
 }
 
 function renderLiveLeaderboard(answers){
-  const entries = Object.entries(answers);
+  const entries = Object.entries(answers); // [tid, { votes, decision }]
   const lb = document.getElementById('leaderboard');
   const counts = {};
-  entries.forEach(([tid, a]) => { counts[a.optionIndex] = (counts[a.optionIndex]||0) + 1; });
+  entries.forEach(([tid, a]) => { if (a.decision) counts[a.decision.optionIndex] = (counts[a.decision.optionIndex]||0) + 1; });
   document.querySelectorAll('#qOpts .opt').forEach(el => {
     const i = el.dataset.i;
-    el.querySelector('.cnt').textContent = (counts[i]||0) + ' answers';
+    el.querySelector('.cnt').textContent = (counts[i]||0) + ' teams';
   });
 
-  if (!entries.length){ lb.innerHTML = '<li>No answers yet.</li>'; return; }
+  if (!entries.length){ lb.innerHTML = '<li>No teams have answered yet.</li>'; return; }
 
   const q = QUESTIONS[questionIndex];
   const correctIdx = q ? q.correct : null;
 
-  const rows = entries.map(([tid, a]) => {
+  const decided = [];
+  const voting = [];
+  entries.forEach(([tid, a]) => {
     const name = (teams[tid] && teams[tid].name) || tid;
-    const isCorrect = a.optionIndex === correctIdx;
-    const elapsed = (questionStartedAtMs && a.ts) ? ((a.ts - questionStartedAtMs) / 1000) : null;
-    return { tid, name, isCorrect, ts: a.ts || 0, elapsed };
+    if (a.decision){
+      const isCorrect = a.decision.optionIndex === correctIdx;
+      const elapsed = (questionStartedAtMs && a.decision.ts) ? ((a.decision.ts - questionStartedAtMs) / 1000) : null;
+      decided.push({ tid, name, isCorrect, ts: a.decision.ts || 0, elapsed });
+    } else {
+      voting.push({ tid, name, voteCount: Object.keys(a.votes || {}).length });
+    }
   });
 
   // Correct answers first (fastest first), then incorrect answers (fastest first)
-  rows.sort((a, b) => {
+  decided.sort((a, b) => {
     if (a.isCorrect !== b.isCorrect) return a.isCorrect ? -1 : 1;
     return a.ts - b.ts;
   });
 
-  lb.innerHTML = rows.map(r => {
+  let html = decided.map(r => {
     const timeText = r.elapsed != null ? r.elapsed.toFixed(1) + 's' : '';
     return `<li class="${r.isCorrect ? 'eligible' : ''}">
       <span>${r.isCorrect ? '✅' : '❌'} ${r.name}</span>
       <span>${timeText}</span>
     </li>`;
   }).join('');
+
+  html += voting.map(r => `<li style="opacity:.6;">
+      <span>🗳️ ${r.name}</span>
+      <span>${r.voteCount} vote${r.voteCount===1?'':'s'} so far</span>
+    </li>`).join('');
+
+  lb.innerHTML = html || '<li>No teams have answered yet.</li>';
 }
 
 function revealResults(){
@@ -523,9 +536,10 @@ function revealResults(){
   db.ref('/session/answers/' + questionIndex).once('value', snap => {
     const answers = snap.val() || {};
     // Only teams that don't already have a bag are eligible to win this round.
+    // Teams still voting (no .decision yet) don't count, even if some individual votes were correct.
     const correctEntries = Object.entries(answers)
-      .filter(([tid, a]) => a.optionIndex === q.correct && !(teams[tid] && teams[tid].hasBag))
-      .sort((a,b) => (a[1].ts||0) - (b[1].ts||0));
+      .filter(([tid, a]) => a.decision && a.decision.optionIndex === q.correct && !(teams[tid] && teams[tid].hasBag))
+      .sort((a,b) => (a[1].decision.ts||0) - (b[1].decision.ts||0));
     const winnerId = correctEntries.length ? correctEntries[0][0] : null;
     currentWinner = winnerId;
     db.ref('/session/results/' + questionIndex).set({ ranking: winnerId ? [winnerId] : [], correctIndex: q.correct });
@@ -596,15 +610,22 @@ function showReveal(bagNum, teamName){
 function renderTeamsList(){
   const list = document.getElementById('teamsList');
   const ids = Object.keys(teams);
+  const onlineMemberTotal = Object.values(presence).reduce((sum, m) => sum + Object.values(m || {}).filter(Boolean).length, 0);
   document.getElementById('teamsCount').textContent =
-    `${ids.length} joined · ${ids.filter(tid => presence[tid]).length} online now`;
+    `${ids.length} teams joined · ${onlineMemberTotal} member(s) online now`;
   if (!ids.length){ list.innerHTML = '<li>No teams have joined yet.</li>'; return; }
   list.innerHTML = ids.map(tid => {
     const t = teams[tid];
-    const online = !!presence[tid];
+    const members = t.members || {};
+    const memberIds = Object.keys(members);
+    const teamPresence = presence[tid] || {};
+    const onlineCount = memberIds.filter(mid => teamPresence[mid]).length;
     const bagText = t.hasBag ? `Bag #${t.bagNum}` : '—';
     return `<li>
-      <span class="team-left"><span class="dot ${online?'online':''}"></span>${t.name}</span>
+      <span class="team-left"><span class="dot ${onlineCount>0?'online':''}"></span>${t.name}
+        <span class="team-tag">${memberIds.length}/5 · ${onlineCount} online</span>
+        <span class="team-tag">Code ${t.code||'?'}</span>
+      </span>
       <span class="team-right"><span class="team-tag">${bagText}</span>
         <button class="removeBtn" data-tid="${tid}">Remove</button>
       </span>
@@ -616,10 +637,13 @@ function renderTeamsList(){
 }
 
 function removeTeam(tid, name){
-  if (!confirm(`Remove "${name}" from the game? Their device can rejoin with a fresh slot, but if they already had a bag, that bag goes back to unclaimed.`)) return;
+  if (!confirm(`Remove "${name}" from the game? All 5 members will need to rejoin with a new team code. If they already had a bag, it goes back to unclaimed.`)) return;
   const t = teams[tid];
   if (t && t.hasBag && t.bagNum){
     db.ref('/bags/' + t.bagNum).remove();
+  }
+  if (t && t.code){
+    db.ref('/teamCodes/' + t.code).remove();
   }
   db.ref('/teams/' + tid).remove();
   db.ref('/presence/' + tid).remove();
@@ -663,6 +687,7 @@ function resetGame(){
   db.ref('/bags').remove();
   db.ref('/session').remove();
   db.ref('/presence').remove();
+  db.ref('/teamCodes').remove();
   questionIndex = -1;
   document.getElementById('qText').textContent = 'Press "Next question" to start';
   document.getElementById('qOpts').innerHTML = '';
