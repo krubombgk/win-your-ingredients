@@ -287,7 +287,7 @@ const PHOTOS = {
 
 let db, teamId, teamName, memberId, memberName, isCaptain = false, captainMemberId = null, memberCount = 0, activeMemberCount = 0,
     myQuestionIndex = -1, hasAnsweredThisRound = false, bagsClaimed = {}, myHasBag = false, myBagNum = null,
-    latestResults = {}, myLastAnswerIndex = null, votesListenerRef = null;
+    latestResults = {}, myLastAnswerIndex = null, votesListenerRef = null, bagDisplayOrder = null;
 
 // This project's Firebase config, embedded so teams don't need to paste anything.
 const FIREBASE_CONFIG = {
@@ -454,6 +454,17 @@ function listenToGame(){
     const p = snap.val() || {};
     activeMemberCount = Object.values(p).filter(Boolean).length;
   });
+
+  // Shared, synced mapping of "display number shown to everyone" -> "real bag id",
+  // so the number itself can't be learned to correlate with the JP/TH ratio pattern.
+  // Whoever gets here first (host or a team) generates it once; everyone else reads it.
+  db.ref('/session/bagDisplayOrder').once('value', snap => {
+    if (!snap.exists()){
+      const order = shuffleArray(bags.map(b => b.n));
+      db.ref('/session/bagDisplayOrder').transaction(current => current === null ? order : undefined);
+    }
+  });
+  db.ref('/session/bagDisplayOrder').on('value', snap => { bagDisplayOrder = snap.val(); });
 
   // If the host removes this team (freeing up the slot for a device swap),
   // reset locally so this device can rejoin fresh instead of being stuck.
@@ -682,7 +693,7 @@ function renderVoteTally(votes, decision, tiebreak, idx){
 
 function renderConfirmCard(bagNum){
   const bag = bags.find(b => b.n === bagNum);
-  document.getElementById('confirmBagNum').textContent = 'Bag #' + bagNum;
+  document.getElementById('confirmBagNum').textContent = 'Bag #' + displayLabelForReal(bagNum);
   const list = document.getElementById('confirmIngList');
   if (!list || !bag) return;
   list.innerHTML = bag.items.map((name, idx) => {
@@ -751,10 +762,6 @@ function submitAnswer(i, opts){
   });
 }
 
-// Randomized once per page load so the grid position doesn't reveal the JP/TH ratio pattern
-// (bag numbers and their actual contents are unchanged — only the display order is shuffled).
-const BAG_DISPLAY_ORDER = shuffleArray(bags.map(b => b.n));
-
 function shuffleArray(arr){
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--){
@@ -764,24 +771,33 @@ function shuffleArray(arr){
   return a;
 }
 
+// bagDisplayOrder[i] = the real bag id shown as "Box (i+1)" — synced via Firebase
+// (see listenToGame) so this always matches what the host screen shows.
+function displayLabelForReal(realNum){
+  if (!bagDisplayOrder) return realNum;
+  const idx = bagDisplayOrder.indexOf(realNum);
+  return idx === -1 ? realNum : idx + 1;
+}
+
 function renderBagGrid(){
   const grid = document.getElementById('bagGrid');
-  grid.innerHTML = BAG_DISPLAY_ORDER.map(n => {
-    const b = bags.find(bag => bag.n === n);
-    const taken = !!bagsClaimed[b.n];
-    const ratioClass = b.ratio.startsWith('JP2') ? 'jp2' : 'th2';
-    return `<button class="bagbtn ${ratioClass} ${taken?'taken':''}" data-n="${b.n}" ${taken?'disabled':''}>
-      <span>${b.n}</span>
+  if (!bagDisplayOrder){ grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--ink-soft);">Loading bags…</p>'; return; }
+  grid.innerHTML = bagDisplayOrder.map((realNum, i) => {
+    const label = i + 1;
+    const taken = !!bagsClaimed[realNum];
+    return `<button class="bagbtn ${taken?'taken':''}" data-real="${realNum}" ${taken?'disabled':''}>
+      <span>${label}</span>
     </button>`;
   }).join('');
   grid.querySelectorAll('.bagbtn').forEach(btn => {
-    btn.onclick = () => claimBag(+btn.dataset.n);
+    btn.onclick = () => claimBag(+btn.dataset.real);
   });
 }
 
-function claimBag(n){
-  if (!confirm(`Choose Bag #${n} for your team? Once confirmed, this can't be changed.`)) return;
-  const ref = db.ref('/bags/' + n);
+function claimBag(realNum){
+  const label = displayLabelForReal(realNum);
+  if (!confirm(`Choose Bag #${label} for your team? Once confirmed, this can't be changed.`)) return;
+  const ref = db.ref('/bags/' + realNum);
   ref.transaction(current => current === null ? teamId : undefined, (error, committed) => {
     if (!committed){
       alert("That bag was just taken by another team a moment ago — pick a different one.");
