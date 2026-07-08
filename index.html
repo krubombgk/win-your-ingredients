@@ -504,7 +504,7 @@ function attachVotesListener(idx){
     if (idx !== myQuestionIndex) return;
     const data = snap.val() || {};
     const votes = data.votes || {};
-    renderVoteTally(votes, data.decision);
+    renderVoteTally(votes, data.decision, data.tiebreak, idx);
 
     const myVote = votes[memberId];
     if (myVote){
@@ -527,15 +527,17 @@ function attachVotesListener(idx){
     }
 
     if (!data.decision){
-      maybeLockDecision(idx, votes);
+      maybeLockDecision(idx, votes, data.tiebreak);
     }
   });
 }
 
 // Locks in the team's answer as soon as one option has a strict majority of the
 // team's current member count. If every member has voted and nobody has a
-// majority (e.g. a 2-2-1 split), the team captain's vote breaks the tie.
-function maybeLockDecision(idx, votes){
+// majority (e.g. a 2-2-1 split):
+//  - if the captain's own vote is one of the tied leading options, that settles it
+//  - otherwise the captain gets asked to explicitly choose between the tied options
+function maybeLockDecision(idx, votes, existingTiebreak){
   if (!memberCount) return;
   const counts = {};
   Object.values(votes).forEach(v => { counts[v.optionIndex] = (counts[v.optionIndex] || 0) + 1; });
@@ -546,25 +548,38 @@ function maybeLockDecision(idx, votes){
   for (const opt in counts){
     if (counts[opt] >= threshold){ decided = +opt; break; }
   }
-  if (decided === null && totalVotes >= memberCount){
-    const captainVote = votes[captainMemberId];
-    if (captainVote){
-      decided = captainVote.optionIndex;
-    } else {
-      // Fallback (shouldn't normally happen): highest vote count wins.
-      let maxC = -1;
-      Object.entries(counts).forEach(([opt, c]) => { if (c > maxC){ maxC = c; decided = +opt; } });
-    }
-  }
   if (decided !== null){
-    db.ref('/session/answers/' + idx + '/' + teamId + '/decision').transaction(current => {
-      if (current !== null && current !== undefined) return; // already decided — don't overwrite
-      return { optionIndex: decided, ts: firebase.database.ServerValue.TIMESTAMP };
-    });
+    lockDecision(idx, decided);
+    return;
+  }
+
+  if (totalVotes >= memberCount && !existingTiebreak){
+    const maxCount = Math.max(...Object.values(counts));
+    const contenders = Object.keys(counts).filter(k => counts[k] === maxCount).map(Number);
+    const captainVote = votes[captainMemberId];
+    if (contenders.length === 1){
+      lockDecision(idx, contenders[0]);
+    } else if (captainVote && contenders.includes(captainVote.optionIndex)){
+      lockDecision(idx, captainVote.optionIndex);
+    } else {
+      // Captain's vote isn't one of the tied leaders — ask the captain to explicitly
+      // choose between just those options.
+      db.ref('/session/answers/' + idx + '/' + teamId + '/tiebreak').transaction(current => {
+        if (current !== null && current !== undefined) return;
+        return { candidates: contenders };
+      });
+    }
   }
 }
 
-function renderVoteTally(votes, decision){
+function lockDecision(idx, optionIndex){
+  db.ref('/session/answers/' + idx + '/' + teamId + '/decision').transaction(current => {
+    if (current !== null && current !== undefined) return; // already decided — don't overwrite
+    return { optionIndex, ts: firebase.database.ServerValue.TIMESTAMP };
+  });
+}
+
+function renderVoteTally(votes, decision, tiebreak, idx){
   const el = document.getElementById('voteTally');
   const optBtns = document.querySelectorAll('#qOpts .optbtn');
   const total = Object.keys(votes).length;
@@ -581,12 +596,31 @@ function renderVoteTally(votes, decision){
       <div class="vbar-wrap"><div class="vbar" style="width:${pct}%"></div></div>
       <span class="vcount">${c}</span></div>`;
   });
-  html += `<div class="vote-summary">${
-    decision
-      ? `✅ Team answer locked in (${total}/${memberCount} voted)`
-      : `${total}/${memberCount} of your team has voted so far…`
-  }</div>`;
+
+  if (decision){
+    html += `<div class="vote-summary">✅ Team answer locked in (${total}/${memberCount} voted)</div>`;
+  } else if (tiebreak){
+    if (isCaptain){
+      html += `<div class="vote-summary">🤔 It's a tie! As captain, pick your team's final answer:</div>
+        <div id="tiebreakBtns" style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;"></div>`;
+    } else {
+      html += `<div class="vote-summary">🤔 It's a tie — your captain is choosing the final answer…</div>`;
+    }
+  } else {
+    html += `<div class="vote-summary">${total}/${memberCount} of your team has voted so far…</div>`;
+  }
   el.innerHTML = html;
+
+  if (tiebreak && !decision && isCaptain){
+    const box = document.getElementById('tiebreakBtns');
+    box.innerHTML = tiebreak.candidates.map(i => {
+      const label = optBtns[i] ? optBtns[i].textContent : ('Option ' + (i+1));
+      return `<button class="bigbtn" style="width:auto;flex:1;margin-top:0;background:var(--fusion-gold);" data-i="${i}">${label}</button>`;
+    }).join('');
+    box.querySelectorAll('button').forEach(btn => {
+      btn.onclick = () => lockDecision(idx, +btn.dataset.i);
+    });
+  }
 }
 
 function renderConfirmCard(bagNum){
