@@ -649,16 +649,29 @@ function removeTeam(tid, name){
   db.ref('/presence/' + tid).remove();
 }
 
+// Randomized once per page load so the grid position doesn't reveal the JP/TH ratio pattern
+// (bag numbers and their actual contents are unchanged — only the display order is shuffled).
+const BAG_DISPLAY_ORDER = shuffleArray(bags.map(b => b.n));
+
+function shuffleArray(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function renderBagGrid(){
   const grid = document.getElementById('bagGrid');
-  grid.innerHTML = bags.map(b => {
+  grid.innerHTML = BAG_DISPLAY_ORDER.map(n => {
+    const b = bags.find(bag => bag.n === n);
     const claimedTid = bagsClaimed[b.n];
     const claimedName = claimedTid && teams[claimedTid] ? teams[claimedTid].name : claimedTid;
     const ratioClass = b.ratio.startsWith('JP2') ? 'jp2' : 'th2';
     return `<div class="bag ${ratioClass} ${claimedTid?'claimed':''}" data-n="${b.n}" data-claimed="${claimedTid?'1':'0'}" style="${claimedTid?'cursor:pointer;':''}">
       <div class="ribbon"></div>
       <div class="n">${b.n}</div>
-      <div class="r">${b.ratio}</div>
       ${claimedTid ? `<div class="stamp">${claimedName}</div>` : ''}
     </div>`;
   }).join('');

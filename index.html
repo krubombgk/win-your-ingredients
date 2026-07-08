@@ -39,7 +39,8 @@
   .optbtn:disabled{ opacity:.55; cursor:default; }
 
   .feedback{ text-align:center; font-family:'Kanit',sans-serif; font-size:19px; padding:14px; }
-  .feedback.good{ color:var(--claimed); }
+  .feedback.good{ color:#2E8B4F; }
+  .feedback.slow{ color:#C99A1E; }
   .feedback.bad{ color:var(--ink-soft); }
   .waitmsg{ text-align:center; color:var(--ink-soft); font-size:15px; padding:20px 0; }
 
@@ -493,8 +494,13 @@ function listenToGame(){
     } else if (phase === 'picking'){
       db.ref('/session/pickTurnTeamId').once('value', tsnap => {
         if (tsnap.val() === teamId){
-          renderBagGrid();
-          show('pickingCard');
+          if (isCaptain){
+            renderBagGrid();
+            show('pickingCard');
+          } else {
+            document.getElementById('waitingText').textContent = "🎉 Your team won this round! Your captain is choosing a bag right now…";
+            show('waitingCard');
+          }
         } else {
           document.getElementById('waitingText').textContent = "🎉 Another team is picking a bag right now. Watch the big screen!";
           show('waitingCard');
@@ -698,8 +704,8 @@ function renderFeedback(){
     el.textContent = `✅ Correct! You were #${rank+1} fastest.`;
     el.className = "feedback good";
   } else if (typeof r.correctIndex === 'number' && myLastAnswerIndex === r.correctIndex){
-    el.textContent = "✅ You got it right — just a little too slow this time. Get ready, next one's coming!";
-    el.className = "feedback good";
+    el.textContent = "🟡 You got it right — just a little too slow this time. Get ready, next one's coming!";
+    el.className = "feedback slow";
   } else {
     el.textContent = "❌ Not this time. Next question coming up!";
     el.className = "feedback bad";
@@ -737,13 +743,27 @@ function submitAnswer(i, opts){
   });
 }
 
+// Randomized once per page load so the grid position doesn't reveal the JP/TH ratio pattern
+// (bag numbers and their actual contents are unchanged — only the display order is shuffled).
+const BAG_DISPLAY_ORDER = shuffleArray(bags.map(b => b.n));
+
+function shuffleArray(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function renderBagGrid(){
   const grid = document.getElementById('bagGrid');
-  grid.innerHTML = bags.map(b => {
+  grid.innerHTML = BAG_DISPLAY_ORDER.map(n => {
+    const b = bags.find(bag => bag.n === n);
     const taken = !!bagsClaimed[b.n];
     const ratioClass = b.ratio.startsWith('JP2') ? 'jp2' : 'th2';
     return `<button class="bagbtn ${ratioClass} ${taken?'taken':''}" data-n="${b.n}" ${taken?'disabled':''}>
-      <span>${b.n}</span><span class="r">${b.ratio}</span>
+      <span>${b.n}</span>
     </button>`;
   }).join('');
   grid.querySelectorAll('.bagbtn').forEach(btn => {
@@ -752,9 +772,11 @@ function renderBagGrid(){
 }
 
 function claimBag(n){
+  if (!confirm(`Choose Bag #${n} for your team? Once confirmed, this can't be changed.`)) return;
   const ref = db.ref('/bags/' + n);
   ref.transaction(current => current === null ? teamId : undefined, (error, committed) => {
     if (!committed){
+      alert("That bag was just taken by another team a moment ago — pick a different one.");
       renderBagGrid(); // someone else got it first — refresh
     }
     // on success, the /teams/{teamId} listener picks up hasBag+bagNum and shows confirmCard
