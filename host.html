@@ -177,23 +177,70 @@
 
 <script>
 // ============ QUESTION BANK (host-only — never sent to team devices) ============
-const QUESTIONS = [
-  { text:"What is the name of the sacred gate seen standing in the water at Miyajima, Japan?", options:["Itsukushima Torii","Fushimi Inari Gate","Kinkaku Gate","Osaka Gate"], correct:0 },
-  { text:"Songkran, the Thai New Year, is best known for which celebration?", options:["Lantern floating","Water festival","Boat racing","Kite flying"], correct:1 },
-  { text:"Which Japanese fruit is famous for costing thousands of yen and given as a luxury gift?", options:["Mikan","Yubari Melon","Banana","Lychee"], correct:1 },
-  { text:"Nam Dok Mai and Monthong are both types of which food?", options:["Thai curry","Fruit","Rice","Fish"], correct:1 },
-  { text:"What is the name of Japan's iconic bullet train?", options:["Shinkansen","Sakura Line","Tokaido Express","Nozomi Cart"], correct:0 },
-  { text:"Which Thai dish is traditionally eaten with sticky rice and mango?", options:["Tom Yum","Khao Niew Mamuang","Pad Thai","Som Tum"], correct:1 },
-  { text:"Kobe and Wagyu are both famous types of which food in Japan?", options:["Fish","Beef","Rice","Tofu"], correct:1 },
-  { text:"What is the currency of Thailand?", options:["Yen","Won","Baht","Ringgit"], correct:2 },
-  { text:"Natto is a traditional Japanese food made by fermenting which ingredient?", options:["Rice","Soybeans","Fish","Seaweed"], correct:1 },
-  { text:"Which northern Thai city is famous for its sticky rice and mountain scenery?", options:["Phuket","Chiang Mai","Pattaya","Krabi"], correct:1 },
-  { text:"What is the capital city of Japan?", options:["Osaka","Kyoto","Tokyo","Nagoya"], correct:2 },
-  { text:"Which Thai fruit is nicknamed the \"king of fruits\" for its strong smell?", options:["Durian","Mangosteen","Rambutan","Longan"], correct:0 },
-  { text:"Matcha is a powdered form of which drink?", options:["Coffee","Green tea","Black tea","Hot chocolate"], correct:1 },
-  { text:"Which Thai region is famous for Jasmine rice?", options:["Surin / Roi Et","Chiang Rai","Phuket","Krabi"], correct:0 },
-  { text:"What is the traditional Japanese art of folding paper called?", options:["Ikebana","Origami","Bonsai","Sumi-e"], correct:1 },
+const TH_QUESTIONS = [
+  { text:"Which fruit is known as the \"King of Fruits\" in Thailand?", options:["Mango","Durian","Coconut"], correct:1 },
+  { text:"Which Thai dish is famous for its spicy and sour flavor?", options:["Pad Thai","Tom Yum Goong","Green Curry"], correct:1 },
+  { text:"What is the national animal of Thailand?", options:["Elephant","Tiger","Buffalo"], correct:0 },
+  { text:"Which city is the capital of Thailand?", options:["Chiang Mai","Pattaya","Bangkok"], correct:2 },
+  { text:"Which country does Thailand NOT share a land border with?", options:["Vietnam","Laos","Cambodia"], correct:0 },
+  { text:"What is Thailand's most important traditional New Year festival?", options:["Loy Krathong","Songkran","Phi Ta Khon"], correct:1 },
+  { text:"Why do Thai people remove their shoes before entering many homes and temples?", options:["To keep the place clean and show respect","To protect their shoes from getting wet","To make walking quieter"], correct:0 },
+  { text:"Which Thai dessert is famous around the world?", options:["Mango Sticky Rice","Pancakes","Cheesecake"], correct:0 },
+  { text:"Which flower is often used to make traditional Thai garlands?", options:["Rose","Jasmine","Sunflower"], correct:1 },
+  { text:"Which famous martial art comes from Thailand?", options:["Karate","Muay Thai","Taekwondo"], correct:1 },
+  { text:"What color is traditionally associated with Monday in Thailand?", options:["Yellow","Blue","Red"], correct:0 },
+  { text:"Which famous floating market is located near Bangkok?", options:["Damnoen Saduak Floating Market","Chatuchak Market","Patpong Night Market"], correct:0 },
 ];
+
+const JP_QUESTIONS = [
+  { text:"Which of these foods did NOT originally come from Japan?", options:["Tempura","Udon","Miso soup"], correct:0 },
+  { text:"Why do many Japanese schools have students help clean the classrooms?", options:["To save money on cleaners","To teach responsibility and teamwork","To prepare students for part-time jobs"], correct:1 },
+  { text:"Which of these cities was once the capital of Japan?", options:["Sapporo","Kyoto","Yokohama"], correct:1 },
+  { text:"Japan is made up of thousands of islands. About how many are there?", options:["Around 700","Around 7,000","Around 14,000"], correct:2 },
+  { text:"What is surprisingly difficult to find while walking around many Japanese cities?", options:["Public rubbish bins","Convenience stores","Train stations"], correct:0 },
+  { text:"What is a feature many Japanese public toilets have?", options:["Heated seats and built-in bidets","Built-in hair dryers","Automatic toothbrushes"], correct:0 },
+  { text:"What is the most popular Christmas meal in Japan?", options:["Sushi","Fried chicken from KFC","Tempura"], correct:1 },
+  { text:"Which famous instant food was invented in Japan?", options:["Cup Noodles","Cornflakes","Potato chips"], correct:0 },
+  { text:"Which fruit is sometimes given as a luxury gift in Japan?", options:["Apple","Melon","Banana"], correct:1 },
+  { text:"What does the word origami literally mean?", options:["Folded paper","Paper bird","Beautiful paper"], correct:0 },
+  { text:"Which famous Japanese animation studio created Spirited Away?", options:["Toei Animation","Studio Ghibli","Pixar Studio"], correct:1 },
+  { text:"What does the red circle on Japan's flag represent?", options:["The emperor","Mount Fuji","The sun"], correct:2 },
+];
+
+// Fallback reflex round — used automatically if the 24 questions above run out
+// without producing 16 winners (e.g. lots of ties or nobody answering correctly).
+// Every option is "correct", so this is effectively "fastest tap wins".
+const BONUS_QUESTIONS = Array.from({length: 15}, (_, i) => ({
+  text: `⚡ Reflex round #${i+1} — tap the button as fast as you can!`,
+  options: ["⚡ Tap now!"],
+  correct: 0,
+}));
+
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildQuestionBank(){
+  const th = shuffle(TH_QUESTIONS);
+  const jp = shuffle(JP_QUESTIONS);
+  const interleaved = [];
+  const startWithTH = Math.random() < 0.5;
+  for (let i = 0; i < th.length; i++){
+    if (startWithTH){ interleaved.push(th[i]); interleaved.push(jp[i]); }
+    else { interleaved.push(jp[i]); interleaved.push(th[i]); }
+  }
+  return interleaved.concat(BONUS_QUESTIONS);
+}
+
+// Alternates Thailand/Japan every question (shuffled within each country so the
+// exact order varies each session), then falls back to 15 reflex-only questions
+// if the main 24 don't produce enough winners.
+const QUESTIONS = buildQuestionBank();
 
 
 // ============ INGREDIENT DATA (shared with the display board) ============
@@ -468,7 +515,7 @@ function revealResults(){
       .sort((a,b) => (a[1].ts||0) - (b[1].ts||0));
     const winnerId = correctEntries.length ? correctEntries[0][0] : null;
     currentWinner = winnerId;
-    db.ref('/session/results/' + questionIndex).set({ ranking: winnerId ? [winnerId] : [] });
+    db.ref('/session/results/' + questionIndex).set({ ranking: winnerId ? [winnerId] : [], correctIndex: q.correct });
     db.ref('/session/phase').set('results');
     document.getElementById('pickBtn').disabled = !winnerId;
     document.getElementById('revealBtn').disabled = true;
