@@ -285,11 +285,19 @@ document.getElementById('joinBtn').onclick = () => {
     localStorage.setItem('wyi_team', JSON.stringify({teamId, teamName}));
   }
 
-  db.ref('/teams/' + teamId).set({ name: teamName, hasBag: false, bagNum: null });
-  document.getElementById('teamNameLabel').textContent = teamName;
-  document.getElementById('joinCard').style.display = 'none';
-  document.getElementById('gameArea').style.display = 'block';
-  listenToGame();
+  // Only create a fresh record if this team doesn't already exist in the database
+  // (brand-new join, or the host did a full game reset). If this is a reconnect,
+  // this preserves hasBag/bagNum so the team keeps seeing their claimed ingredients
+  // instead of losing them.
+  db.ref('/teams/' + teamId).once('value', snap => {
+    if (!snap.exists()){
+      db.ref('/teams/' + teamId).set({ name: teamName, hasBag: false, bagNum: null });
+    }
+    document.getElementById('teamNameLabel').textContent = teamName;
+    document.getElementById('joinCard').style.display = 'none';
+    document.getElementById('gameArea').style.display = 'block';
+    listenToGame();
+  });
 };
 
 function listenToGame(){
@@ -335,6 +343,15 @@ function listenToGame(){
       myQuestionIndex = idx;
       hasAnsweredThisRound = false;
       myLastAnswerIndex = null;
+      // A changed question index always means a genuinely new round has started.
+      // Refresh the visible question directly here — don't rely solely on the
+      // /session/phase listener, since if the host clicks "Next question" again
+      // without ever clicking "Reveal results", phase stays "question" -> "question"
+      // (no value change), so that listener wouldn't fire and the screen would be
+      // left showing the previous question's text while accepting answers for this one.
+      if (!myHasBag){
+        db.ref('/session/question').once('value', qsnap => showQuestion(qsnap.val()));
+      }
     }
   });
 
@@ -397,6 +414,7 @@ function renderFeedback(){
 
 function showQuestion(q){
   if (!q) return;
+  hide(['waitingCard','feedbackCard','pickingCard','confirmCard']);
   document.getElementById('qText').textContent = q.text;
   const opts = document.getElementById('qOpts');
   opts.innerHTML = q.options.map((o,i) => `<button class="optbtn" data-i="${i}">${o}</button>`).join('');
