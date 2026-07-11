@@ -34,6 +34,12 @@
   .captain-badge{ display:inline-block; background:var(--fusion-gold); color:#fff; font-family:'Kanit',sans-serif; font-weight:600; font-size:10.5px; padding:2px 8px; border-radius:10px; margin-left:6px; letter-spacing:.03em; }
   .leaveBtn{ display:block; margin:0 auto 14px; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--warn); background:none; border:1px solid var(--warn); border-radius:8px; padding:5px 12px; cursor:pointer; }
   .leaveBtn:hover{ background:var(--warn); color:#fff; }
+  .roster-row{ display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--paper-dark); font-size:14px; }
+  .roster-row:last-child{ border-bottom:none; }
+  .roster-row .rname{ font-family:'Sarabun',sans-serif; }
+  .roster-row .rname .you{ color:var(--ink-soft); font-size:11px; }
+  .removeMemberBtn{ font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--warn); background:none; border:1px solid var(--warn); border-radius:7px; padding:3px 9px; cursor:pointer; }
+  .removeMemberBtn:hover{ background:var(--warn); color:#fff; }
 
   .qtext{ font-family:'Kanit',sans-serif; font-size:21px; font-weight:600; text-align:center; margin:0 0 18px;}
   .optbtn{ display:block; width:100%; text-align:left; background:var(--paper-dark); border:2px solid transparent; border-radius:12px; padding:16px 18px; font-size:16px; font-family:'Sarabun',sans-serif; margin-bottom:10px; cursor:pointer; }
@@ -103,42 +109,25 @@
   <p class="eyebrow">Win Your Ingredients · Team · v2 (5-member voting)</p>
   <h1><span class="r">Fusion</span> <span class="b">Food Challenge</span></h1>
 
-  <div id="startCard" class="card">
-    <h2>Get started</h2>
-    <button class="bigbtn" id="createTeamBtn">🆕 Create a new team</button>
-    <button class="bigbtn" id="joinTeamBtn" style="background:var(--fusion-gold);">🤝 Join an existing team</button>
-    <p style="text-align:center;color:var(--ink-soft);font-size:12.5px;margin-top:14px;">One person per team creates it first, then shares the team code with the other 4 members.</p>
-  </div>
-
-  <div id="createCard" class="card" style="display:none;">
-    <h2>Create a new team</h2>
-    <input type="text" id="teamNameInput" placeholder="Team name (e.g. Sakura Squad)" maxlength="30">
-    <input type="text" id="myNameCreateInput" placeholder="Your name" maxlength="24" style="margin-top:10px;">
-    <button class="bigbtn" id="createBtn">Create team — I'll be the captain</button>
-    <button class="bigbtn" id="backFromCreateBtn" style="background:none;color:var(--ink-soft);border:1px solid #D8CAA6;">← Back</button>
-    <p id="createStatus" style="text-align:center;color:var(--ink-soft);font-size:12.5px;margin-top:10px;"></p>
-  </div>
-
-  <div id="joinTeamCard" class="card" style="display:none;">
-    <h2>Join an existing team</h2>
-    <input type="text" id="teamCodeInput" placeholder="Team code (e.g. AB3K)" maxlength="6" style="text-transform:uppercase;">
-    <input type="text" id="myNameJoinInput" placeholder="Your name" maxlength="24" style="margin-top:10px;">
-    <button class="bigbtn" id="joinTeamConfirmBtn">Join team</button>
-    <button class="bigbtn" id="backFromJoinBtn" style="background:none;color:var(--ink-soft);border:1px solid #D8CAA6;">← Back</button>
-    <p id="joinTeamStatus" style="text-align:center;color:var(--ink-soft);font-size:12.5px;margin-top:10px;"></p>
-  </div>
-
-  <div id="codeRevealCard" class="card confirmbox" style="display:none;">
-    <h2>Team created! 🎉</h2>
-    <p style="color:var(--ink-soft);">Share this code with your 4 teammates:</p>
-    <p class="big" id="revealedCode" style="font-size:38px;letter-spacing:.1em;"></p>
-    <p style="color:var(--ink-soft);font-size:13px;">They open this same page, tap "Join an existing team", and enter this code.</p>
-    <button class="bigbtn" id="continueToGameBtn">Continue to the game →</button>
+  <div id="joinCard" class="card">
+    <h2>Select your Kitchen</h2>
+    <select id="kitchenSelect">
+      <option value="">Choose your Kitchen…</option>
+    </select>
+    <input type="text" id="myNameInput" placeholder="Your name" maxlength="24" style="margin-top:10px;">
+    <button class="bigbtn" id="joinBtn">Join game</button>
+    <p id="joinStatus" style="text-align:center;color:var(--ink-soft);font-size:12.5px;margin-top:10px;"></p>
   </div>
 
   <div id="gameArea" style="display:none;">
     <p class="teamtag">Playing as <b id="teamNameLabel"></b> · <span id="myRoleLabel"></span></p>
     <button class="leaveBtn" id="leaveTeamBtn">Leave team</button>
+
+    <div id="rosterCard" class="card" style="display:none;">
+      <h2 style="font-size:15px;">Your team (captain view)</h2>
+      <div id="rosterList"></div>
+      <p style="text-align:center;color:var(--ink-soft);font-size:11.5px;margin-top:10px;">Joined the wrong Kitchen? Remove them here so they can rejoin the right one.</p>
+    </div>
 
     <div id="waitingCard" class="card" style="display:none;">
       <p class="waitmsg" id="waitingText">Waiting for the host to start the next question…</p>
@@ -309,73 +298,60 @@ const FIREBASE_CONFIG = {
 firebase.initializeApp(FIREBASE_CONFIG);
 db = firebase.database();
 
-function slugify(s){
-  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'team';
-}
-
-// Avoids visually-ambiguous characters (0/O, 1/I/L) since teams read this code aloud/out loud in class.
-const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-function genCode(){
-  let c = '';
-  for (let i = 0; i < 4; i++) c += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-  return c;
-}
-
 function showCard(id){
-  ['startCard','createCard','joinTeamCard','codeRevealCard','gameArea'].forEach(cid => {
+  ['joinCard','gameArea'].forEach(cid => {
     document.getElementById(cid).style.display = (cid === id) ? 'block' : 'none';
   });
   document.getElementById('joinBanner').style.display = (id === 'gameArea') ? 'none' : 'block';
 }
 
-document.getElementById('createTeamBtn').onclick = () => showCard('createCard');
-document.getElementById('joinTeamBtn').onclick = () => showCard('joinTeamCard');
-document.getElementById('backFromCreateBtn').onclick = () => showCard('startCard');
-document.getElementById('backFromJoinBtn').onclick = () => showCard('startCard');
+// Populate the Kitchen dropdown once, at load.
+(function populateKitchens(){
+  const sel = document.getElementById('kitchenSelect');
+  for (let n = 1; n <= 16; n++){
+    const opt = document.createElement('option');
+    opt.value = n;
+    opt.textContent = 'Kitchen ' + n;
+    sel.appendChild(opt);
+  }
+})();
 
-document.getElementById('createBtn').onclick = () => {
-  const name = document.getElementById('teamNameInput').value.trim();
-  const myName = document.getElementById('myNameCreateInput').value.trim();
-  if (!name || !myName){ document.getElementById('createStatus').textContent = "Enter both a team name and your own name."; return; }
+document.getElementById('joinBtn').onclick = () => {
+  const n = document.getElementById('kitchenSelect').value;
+  const myName = document.getElementById('myNameInput').value.trim();
+  const statusEl = document.getElementById('joinStatus');
+  if (!n){ statusEl.textContent = "Choose your Kitchen from the list."; return; }
+  if (!myName){ statusEl.textContent = "Enter your name."; return; }
 
-  teamId = slugify(name) + '-' + Math.random().toString(36).slice(2,6);
-  memberId = 'm-' + Math.random().toString(36).slice(2,8);
-  teamName = name; memberName = myName; isCaptain = true; captainMemberId = memberId;
-  const code = genCode();
+  const targetTeamId = 'kitchen-' + n;
+  const targetTeamName = 'Kitchen ' + n;
 
-  // Reserve the code first (fails harmlessly if — astronomically unlikely — it's taken)
-  db.ref('/teamCodes/' + code).set(teamId);
-  db.ref('/teams/' + teamId).set({ name: teamName, hasBag: false, bagNum: null, code: code, captainMemberId: memberId });
-  db.ref('/teams/' + teamId + '/members/' + memberId).set({ name: memberName });
+  db.ref('/teams/' + targetTeamId).once('value', tsnap => {
+    const t = tsnap.val();
+    const members = (t && t.members) || {};
+    if (Object.keys(members).length >= 5){ statusEl.textContent = "Kitchen " + n + " already has 5 members. Please double-check with your teacher."; return; }
 
-  localStorage.setItem('wyi_member_v2', JSON.stringify({ teamId, memberId, memberName, isCaptain: true }));
+    teamId = targetTeamId;
+    teamName = targetTeamName;
+    memberId = 'm-' + Math.random().toString(36).slice(2,8);
+    memberName = myName;
 
-  document.getElementById('revealedCode').textContent = code;
-  showCard('codeRevealCard');
-};
-
-document.getElementById('continueToGameBtn').onclick = () => enterGame();
-
-document.getElementById('joinTeamConfirmBtn').onclick = () => {
-  const code = document.getElementById('teamCodeInput').value.trim().toUpperCase();
-  const myName = document.getElementById('myNameJoinInput').value.trim();
-  if (!code || !myName){ document.getElementById('joinTeamStatus').textContent = "Enter both the team code and your own name."; return; }
-
-  db.ref('/teamCodes/' + code).once('value', snap => {
-    const foundTeamId = snap.val();
-    if (!foundTeamId){ document.getElementById('joinTeamStatus').textContent = "No team found with that code — check with your captain."; return; }
-    db.ref('/teams/' + foundTeamId).once('value', tsnap => {
-      const t = tsnap.val();
-      if (!t){ document.getElementById('joinTeamStatus').textContent = "That team no longer exists."; return; }
-      const members = t.members || {};
-      if (Object.keys(members).length >= 5){ document.getElementById('joinTeamStatus').textContent = "This team already has 5 members."; return; }
-      teamId = foundTeamId; teamName = t.name; captainMemberId = t.captainMemberId;
-      memberId = 'm-' + Math.random().toString(36).slice(2,8);
-      memberName = myName; isCaptain = false;
+    if (!t){
+      // First person to join this Kitchen becomes captain automatically.
+      isCaptain = true; captainMemberId = memberId;
+      db.ref('/teams/' + teamId).set({ name: teamName, hasBag: false, bagNum: null, captainMemberId: memberId });
       db.ref('/teams/' + teamId + '/members/' + memberId).set({ name: memberName });
-      localStorage.setItem('wyi_member_v2', JSON.stringify({ teamId, memberId, memberName, isCaptain: false }));
-      enterGame();
-    });
+    } else {
+      // Team already exists — join as a regular member. If somehow no captain is set
+      // (e.g. an earlier captain left and the promotion step hasn't landed yet), claim it.
+      isCaptain = !t.captainMemberId;
+      captainMemberId = t.captainMemberId || memberId;
+      if (isCaptain) db.ref('/teams/' + teamId + '/captainMemberId').set(memberId);
+      db.ref('/teams/' + teamId + '/members/' + memberId).set({ name: memberName });
+    }
+
+    localStorage.setItem('wyi_member_v2', JSON.stringify({ teamId, memberId, memberName, isCaptain }));
+    enterGame();
   });
 };
 
@@ -438,6 +414,31 @@ function leaveTeam(){
   });
 }
 
+function renderRoster(members){
+  const card = document.getElementById('rosterCard');
+  const list = document.getElementById('rosterList');
+  if (!isCaptain){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  const entries = Object.entries(members);
+  list.innerHTML = entries.map(([id, m]) => {
+    const youTag = (id === memberId) ? '<span class="you"> (you)</span>' : '';
+    const removeBtn = (id === memberId) ? '' : `<button class="removeMemberBtn" data-id="${id}" data-name="${escapeHtml(m.name || '')}">Remove</button>`;
+    return `<div class="roster-row"><span class="rname">${escapeHtml(m.name || '')}${youTag}</span>${removeBtn}</div>`;
+  }).join('');
+  list.querySelectorAll('.removeMemberBtn').forEach(btn => {
+    btn.onclick = () => removeMember(btn.dataset.id, btn.dataset.name);
+  });
+}
+
+function removeMember(targetId, targetName){
+  if (!confirm(`Remove ${targetName} from ${teamName}? They joined the wrong Kitchen and will need to rejoin the correct one.`)) return;
+  db.ref('/teams/' + teamId + '/members/' + targetId).remove();
+  db.ref('/presence/' + teamId + '/' + targetId).remove();
+  // That member's own device is still "in game" — it will detect its member node
+  // disappeared (via the members listener) and can be kicked back to the join screen
+  // the same way a host-side team removal already works.
+}
+
 function finishLeaving(){
   db.ref('/presence/' + teamId + '/' + memberId).remove();
   localStorage.removeItem('wyi_member_v2');
@@ -487,7 +488,10 @@ function startPresence(){
 
 function listenToGame(){
   db.ref('/bags').on('value', snap => { bagsClaimed = snap.val() || {}; });
-  db.ref('/teams/' + teamId + '/members').on('value', snap => { memberCount = snap.numChildren(); });
+  db.ref('/teams/' + teamId + '/members').on('value', snap => {
+    memberCount = snap.numChildren();
+    renderRoster(snap.val() || {});
+  });
   db.ref('/teams/' + teamId + '/captainMemberId').on('value', snap => {
     captainMemberId = snap.val();
     isCaptain = (captainMemberId === memberId);
@@ -508,6 +512,20 @@ function listenToGame(){
     }
   });
   db.ref('/session/bagDisplayOrder').on('value', snap => { bagDisplayOrder = snap.val(); });
+
+  // If the captain (or host) removes just this member — e.g. they joined the wrong
+  // Kitchen — detect it and send this device back to the join screen.
+  let hadMemberRecord = true;
+  db.ref('/teams/' + teamId + '/members/' + memberId).on('value', snap => {
+    const exists = snap.exists();
+    if (hadMemberRecord && !exists){
+      localStorage.removeItem('wyi_member_v2');
+      alert("You were removed from this team. Please select the correct Kitchen and rejoin.");
+      location.reload();
+      return;
+    }
+    hadMemberRecord = exists;
+  });
 
   // If the host removes this team (freeing up the slot for a device swap),
   // reset locally so this device can rejoin fresh instead of being stuck.
